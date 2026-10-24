@@ -1,14 +1,17 @@
-<title>Mini Stick '94</title>
+<meta charset="utf-8">
+<title>Barnburner</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
 <style>
-/* Layout: one 16-bit console screen at a time (title, setup, bracket, faceoff, stats), bevelled blue menu panels on a scanlined navy field. Single dark look on purpose. */
+/* Layout: one 16-bit console screen at a time (title, setup, bracket, faceoff, stats), bevelled blue menu panels on a scanlined navy field. Single dark look on purpose.
+   Barnburner brand: fire (orange/red) against ice (pale blue). The West half of the bracket is the Fire side, the East half the Ice side. */
 :root{
   --navy:#050a33; --deep:#0b1663; --panel:#1b2e9c; --panel2:#13207a;
   --hi:#5c78ee; --lo:#040a3f; --ink:#f3f5ff; --dim:#9db0ff;
   --gold:#f8d838; --red:#ec3a3a; --ice:#e4ecff; --ok:#46d67a;
+  --fire:#ff7a1a; --ember:#ff3d1f; --frost:#7fd4ff;
   --pix:"Press Start 2P", "Courier New", monospace;
   --txt:"VT323", "Courier New", monospace;
   color-scheme:dark;
@@ -16,7 +19,7 @@
 html,body{min-height:100%}
 body{
   background:var(--navy);
-  background-image:repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 2px, transparent 2px 4px), radial-gradient(ellipse at 50% 0%, #142283 0%, var(--navy) 70%);
+  background-image:repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 2px, transparent 2px 4px), radial-gradient(ellipse at 0% 100%, rgba(255,90,20,.16) 0%, transparent 45%), radial-gradient(ellipse at 100% 100%, rgba(127,212,255,.14) 0%, transparent 45%), radial-gradient(ellipse at 50% 0%, #142283 0%, var(--navy) 70%);
   background-attachment:fixed;
   color:var(--ink); font-family:var(--txt); font-size:20px; line-height:1.15;
 }
@@ -49,7 +52,7 @@ label{display:flex;flex-direction:column;gap:4px;font-size:18px;color:var(--dim)
 
 /* top bar */
 .bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.logo{font-family:var(--pix);font-size:13px;color:var(--gold);text-shadow:2px 2px 0 var(--red),4px 4px 0 #000;cursor:pointer;background:none;border:0;padding:0}
+.logo{font-family:var(--pix);font-size:13px;color:var(--fire);text-shadow:2px 2px 0 var(--ember),4px 4px 0 #000;cursor:pointer;background:none;border:0;padding:0}
 .bar .tname{font-size:22px;color:var(--ink)}
 .save{font-family:var(--pix);font-size:8px;color:var(--ok)}
 .save.local{color:var(--gold)}
@@ -57,8 +60,11 @@ label{display:flex;flex-direction:column;gap:4px;font-size:18px;color:var(--dim)
 
 /* title screen */
 .title{align-items:center;text-align:center;gap:22px;padding-block:34px}
-.title h1{font-size:clamp(26px,7vw,54px);color:var(--gold);text-shadow:3px 3px 0 var(--red),6px 6px 0 #000;line-height:1.2}
-.title .sub{font-family:var(--pix);font-size:clamp(11px,2.6vw,16px);color:var(--ice);text-shadow:2px 2px 0 #000}
+.title h1{font-size:clamp(26px,7.5vw,60px);line-height:1.15;color:var(--fire)}
+.title h1 span{display:block;background:linear-gradient(180deg,#fff3a0 0%,var(--gold) 28%,var(--fire) 62%,var(--ember) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(3px 3px 0 #6a0d0d) drop-shadow(3px 3px 0 #000)}
+.title h1 .ice{background:linear-gradient(180deg,#ffffff 0%,var(--ice) 35%,var(--frost) 75%,#3f8fd8 100%);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(3px 3px 0 #0b3a8a) drop-shadow(3px 3px 0 #000)}
+.title .sub{font-family:var(--pix);font-size:clamp(11px,2.6vw,16px);color:var(--ice);text-shadow:2px 2px 0 #000;line-height:1.6}
+.title .sub .f{color:var(--fire)}.title .sub .i{color:var(--frost)}
 .press{font-family:var(--pix);font-size:10px;color:var(--ink);animation:blink 1.2s steps(1) infinite}
 .rink{width:min(420px,100%);aspect-ratio:2.2/1;max-width:100%;background:var(--ice);border:4px solid #000;border-radius:60px/27%;position:relative;box-shadow:0 0 0 3px var(--hi)}
 .rink i{position:absolute;top:0;bottom:0;width:6px}
@@ -66,7 +72,8 @@ label{display:flex;flex-direction:column;gap:4px;font-size:18px;color:var(--dim)
 .rink .b1{left:33%;background:#2149d8}.rink .b2{right:33%;background:#2149d8}
 .rink .g1{left:9%;width:2px;background:var(--red)}.rink .g2{right:9%;width:2px;background:var(--red)}
 .rink b{position:absolute;left:50%;top:50%;width:22%;aspect-ratio:1;border:3px solid #2149d8;border-radius:50%;transform:translate(-50%,-50%)}
-.rink .puck{position:absolute;width:14px;height:9px;background:#000;border-radius:50%;top:46%;left:20%;animation:slide 3.2s ease-in-out infinite alternate}
+.rink .puck{position:absolute;width:14px;height:9px;background:#000;border-radius:50%;top:46%;left:20%;box-shadow:0 0 6px 3px var(--fire),0 0 14px 6px rgba(255,61,31,.55);animation:slide 3.2s ease-in-out infinite alternate,flicker .35s steps(2) infinite}
+@keyframes flicker{50%{box-shadow:0 0 4px 2px var(--gold),0 0 18px 8px rgba(255,122,26,.6)}}
 @keyframes slide{to{left:76%;top:58%}}
 .menu{display:flex;flex-direction:column;gap:10px;min-width:min(320px,100%)}
 .menu .btn{font-size:12px}
@@ -207,6 +214,25 @@ tr:nth-child(even) td{background:rgba(0,0,0,.18)}
 .cand.sel{background:var(--gold);color:var(--navy)}
 .cand b{font-family:var(--pix);font-size:9px;font-weight:400}
 .ideas{font-size:19px;display:flex;flex-direction:column;gap:4px}
+
+/* fire and ice: bracket sides and player streaks */
+.bcol.fire h3{color:var(--fire)}
+.bcol.ice h3{color:var(--frost)}
+.bcol.fire .match{border-color:#c4561c}
+.bcol.ice .match{border-color:#4f9fd6}
+.bcol.fire .match:hover,.bcol.fire .match:focus-visible,.bcol.ice .match:hover,.bcol.ice .match:focus-visible{border-color:var(--gold)}
+.bcol.fire .match[disabled],.bcol.fire .match.ro:hover{border-color:#c4561c}
+.bcol.ice .match[disabled],.bcol.ice .match.ro:hover{border-color:#4f9fd6}
+.fvi{font-family:var(--pix);font-size:8px;color:var(--dim)}
+.fvi .f{color:var(--fire)}.fvi .i{color:var(--frost)}
+.heat{display:flex;gap:8px;flex-wrap:wrap}
+.streak{display:inline-flex;align-items:center;gap:6px;font-family:var(--pix);font-size:8px;padding:5px 8px;border:2px solid #000;white-space:nowrap}
+.streak.fire{background:linear-gradient(180deg,var(--gold),var(--fire) 55%,var(--ember));color:#2a0500;animation:flame .5s steps(2) infinite}
+.streak.ice{background:linear-gradient(180deg,#fff,var(--frost));color:#05214a}
+.streak .nm{font-family:var(--txt);font-size:17px;letter-spacing:0}
+@keyframes flame{50%{box-shadow:0 0 10px 2px rgba(255,122,26,.7)}}
+.who.hot{text-shadow:0 0 6px var(--fire),0 0 2px var(--ember)}
+.who.cold{text-shadow:0 0 6px var(--frost)}
 
 /* shared results (read only) and cup records */
 .match.ro{cursor:default}
@@ -442,7 +468,7 @@ async function connectDb(){
 /* first-time walkthrough */
 const HELP_KEY = "ministick94.seenHelp";
 const HELP = [
-  ["WELCOME TO MINI STICK '94", `<p>Run a mini stick hockey playoff at home. One device runs the whole tournament: set it up once, then play each game and punch in the score.</p>
+  ["WELCOME TO BARNBURNER", `<p>Run a mini stick, roller or beer league hockey playoff. One device runs the whole tournament: set it up once, then play each game and punch in the score.</p>
     <ul><li><b>Size:</b> 4, 8 or 16 teams</li><li><b>Players:</b> who's playing (2 to 4)</li><li><b>Teams &amp; seeds:</b> pick and rank the NHL teams</li><li><b>Draft order:</b> who picks first</li><li><b>Draft:</b> take turns choosing teams</li></ul>`],
   ["SIZE AND PLAYERS", `<ul><li>Pick <b>4, 8 or 16 teams</b>. Half play in the West, half in the East, and the two conference champions meet in the Stanley Cup Final.</li>
     <li>Choose <b>2 to 4 players</b> and type their names. Each gets a colour that follows them through the bracket.</li></ul>`],
@@ -547,7 +573,7 @@ function render(){
 function vTop(){
   const inPlay = state && state.stage==="bracket";
   return `<header class="bar">
-    <button class="logo" data-act="home" aria-label="Main menu">MINI STICK '94</button>
+    <button class="logo" data-act="home" aria-label="Main menu">BARNBURNER</button>
     <span class="tname">${esc(state.name)}</span>
     ${ro?"":saveTag()}
     <nav class="nav">
@@ -566,8 +592,8 @@ function vTop(){
 function vTitle(){
   const has = state && (state.stage==="bracket" || state.step>1 || state.entries.some(e=>e.team));
   return `<section class="panel title">
-    <h1>MINI STICK<br>HOCKEY '94</h1>
-    <p class="sub">TIME TO DO THE HOCKEY!</p>
+    <h1 aria-label="Barnburner"><span>BARN</span><span class="ice">BURNER</span></h1>
+    <p class="sub"><span class="f">FIRE</span> ON <span class="i">ICE</span>. LET'S RUN A BARNBURNER!</p>
     <div class="rink" aria-hidden="true"><i class="g1"></i><i class="b1"></i><i class="red"></i><i class="b2"></i><i class="g2"></i><b></b><span class="puck"></span></div>
     <p class="press">PRESS START</p>
     <div class="menu">
@@ -681,7 +707,7 @@ function matchCard(g){
     const who = ent ? state.players[ctrl[s]] : null;
     const pick = gm && gm.sides[s].skater ? " · "+esc(pName(gm.sides[s].skater).split(" ").slice(-1)[0]) : "";
     return `<div class="mrow${final?(win===s?" win":" lose"):""}"><span class="sd">${e!=null&&state.v>=2?e%CONF()+1:""}</span><span class="team"><span class="logo">${logo(ent&&ent.team)}</span></span>
-      <span class="who2"><b>${ent?esc(TEAMS[ent.team][1]).toUpperCase():"TBD"}</b><span class="who" style="color:${who?PCOLORS[ctrl[s]]:"var(--dim)"}">${who?esc(who.name)+pick:"Winner of G"+(feeders(g)[s]+1)}</span></span>
+      <span class="who2"><b>${ent?esc(TEAMS[ent.team][1]).toUpperCase():"TBD"}</b><span class="who${who?{fire:" hot",ice:" cold"}[(streak(ctrl[s])||{}).kind]||"":""}" style="color:${who?PCOLORS[ctrl[s]]:"var(--dim)"}">${who?esc(who.name)+pick:"Winner of G"+(feeders(g)[s]+1)}</span></span>
       <span class="sc">${final?gm.sides[s].score:""}</span></div>`;
   }).join("");
   if (ro) return `<div class="match ro">${rows}<div class="mfoot">G${g+1} · ${final?`FINAL${gm.ot?" / OT":""}`:ready?"NOT PLAYED YET":"WAITING"}</div></div>`;
@@ -689,24 +715,25 @@ function matchCard(g){
   return `<button class="match" data-act="open" data-g="${g}"${ready?"":" disabled"} aria-label="Game ${g+1}">${rows}<div class="mfoot${clash?" alert":""}">G${g+1} · ${foot}</div></button>`;
 }
 function vBracket(){
-  const col = (title, ids) => `<div class="bcol"><h3>${title}</h3>${ids.map(matchCard).join("")}</div>`;
+  const col = (title, ids, side) => `<div class="bcol${side?" "+side:""}"><h3>${title}</h3>${ids.map(matchCard).join("")}</div>`;
   const F = FINAL();
   const champE = winnerEntry(F);
   const champ = champE!=null ? state.entries[champE] : null;
   const champOwner = champ ? state.players[controller(F, state.games[F].sides[0].score>state.games[F].sides[1].score?0:1)] : null;
-  const cupCol = `<div class="bcol"><h3>STANLEY CUP FINAL</h3>${matchCard(F)}
+  const cupCol = `<div class="bcol"><h3>STANLEY CUP FINAL</h3><p class="fvi" style="text-align:center"><span class="f">FIRE</span> VS <span class="i">ICE</span></p>${matchCard(F)}
     <div class="cup"><div class="trophy" aria-hidden="true"></div>
     ${champ?`<p class="champ">${esc(TEAMS[champ.team][0]+" "+TEAMS[champ.team][1]).toUpperCase()}<br>WIN THE CUP!</p><p>${esc(champOwner.name)} takes it.</p>
       ${ro&&!state.conn?"":`<button class="btn small" data-act="go" data-v="conn">${state.conn?"Conn Smythe: "+esc(pName(state.conn)):"Pick the Conn Smythe"}</button>`}`:`<p class="muted">Champion crowned here</p>`}
     </div></div>`;
   const R = ROUNDS();
   const half = (r, west) => { const s=rstart(r), h=rcount(r)/2; return Array.from({length:h},(_,i)=>s+(west?i:h+i)); };
-  const label = (r, west) => (west?"WEST":"EAST")+" · "+["ROUND 1","SEMIS","FINAL"][r+4-R];
+  const label = (r, west) => (west?"FIRE · WEST":"ICE · EAST")+" · "+["ROUND 1","SEMIS","FINAL"][r+4-R];
   const west = [], east = [];
-  for (let r=0; r<R-1; r++){ west.push(col(label(r,true), half(r,true))); east.unshift(col(label(r,false), half(r,false))); }
+  for (let r=0; r<R-1; r++){ west.push(col(label(r,true), half(r,true), "fire")); east.unshift(col(label(r,false), half(r,false), "ice")); }
   const ncols = 2*(R-1)+1;
   return `<section class="panel">
     <div class="row"><h2>PLAYOFF BRACKET · ${SIZE()} TEAMS</h2><span class="grow"></span><span class="muted">${ro?"Shared results. Only the host can enter scores.":"Tap a game to set lineups and enter the score."}</span></div>
+    ${(h=>h?`<div class="heat">${h}</div>`:"")(state.players.map((_,i)=>streakTag(i,true)).join(""))}
     <div class="bwrap"><div class="bracket" style="grid-template-columns:repeat(${ncols},minmax(200px,1fr));min-width:${ncols*210}px">
       ${west.join("")}${cupCol}${east.join("")}
     </div></div>
@@ -772,7 +799,7 @@ function vGame(){
   const issues = draftIssues(g);
   const conf = confOf(g);
   return `<section class="panel">
-    <div class="row"><h2>${conf==="F"?"STANLEY CUP FINAL":(conf==="W"?"WEST":"EAST")+" · "+roundName(roundOf(g)).toUpperCase()+" · GAME "+gameNo(g)}</h2><span class="grow"></span>
+    <div class="row"><h2>${conf==="F"?"STANLEY CUP FINAL":(conf==="W"?"FIRE · WEST":"ICE · EAST")+" · "+roundName(roundOf(g)).toUpperCase()+" · GAME "+gameNo(g)}</h2><span class="grow"></span>
       <button class="btn small" data-act="go" data-v="bracket">Back to bracket</button></div>
     ${isLocked?`<p class="warn">The next round has started, so this game is locked.</p>`:""}
     <div class="vs">${side(0)}<div class="vsmid">VS</div>${side(1)}</div>
@@ -801,6 +828,18 @@ function finals(){
   }
   return out;
 }
+/* a player's current run: 2+ wins in a row puts them on fire, 2+ losses in a row leaves them ice cold.
+   Games count in the order their scores went in (older saves fall back to bracket order). */
+function streak(i){
+  const r = finals().filter(x=>x.owner===i)
+    .sort((a,b)=>(state.games[a.g].at||0)-(state.games[b.g].at||0) || a.g-b.g);
+  if (!r.length) return null;
+  const last = r[r.length-1].win; let n = 0;
+  for (let k=r.length-1; k>=0 && r[k].win===last; k--) n++;
+  return n>=2 ? { kind: last?"fire":"ice", n } : null;
+}
+const streakTag = (i, withName) => { const st = streak(i); if (!st) return "";
+  return `<span class="streak ${st.kind}">${st.kind==="fire"?"ON FIRE":"ICE COLD"} ×${st.n}${withName?` <span class="nm">${esc(state.players[i].name)}</span>`:""}</span>`; };
 function vStats(){
   const F = finals();
   const tabs = [["players","Standings"],["skaters","Skaters"],["goalies","Goalies"],["teams","Teams"],["games","Game log"]];
@@ -816,10 +855,10 @@ function vStats(){
     const sm = summary(state);
     if (sm) rows.sort((a,b)=>(sm.players[a.i].finish??9)-(sm.players[b.i].finish??9)||b.w-a.w||b.diff-a.diff);
     else rows.sort((a,b)=>b.w-a.w||b.diff-a.diff||b.gf-a.gf);
-    body = table(["Player",sm?"Finish":"Teams left","GP","W","L","GF","GA","+/-","SO","OTW"],
+    body = table(["Player",sm?"Finish":"Teams left","GP","W","L","GF","GA","+/-","SO","OTW","Streak"],
       rows.map(r=>[`<i class="chip" style="background:${PCOLORS[r.i]}"></i>${esc(r.p.name)}`,
         sm ? finishName(sm.players[r.i].finish) : state.entries.filter((en,ei)=>en.owner===r.i && isAlive(ei)).length,
-        r.gp,r.w,r.l,r.gf,r.ga,(r.diff>0?"+":"")+r.diff,r.so,r.ot]));
+        r.gp,r.w,r.l,r.gf,r.ga,(r.diff>0?"+":"")+r.diff,r.so,r.ot,streakTag(r.i)||"—"]));
   } else if (ui.tab==="skaters"){
     const rows = F.filter(x=>x.skater).sort((a,b)=>b.gf-a.gf||a.g-b.g);
     body = table(["Skater","Pos","Team","Played for","Game","Team goals","Result"],
@@ -1022,7 +1061,7 @@ document.addEventListener("click", ev => {
   else if (a==="savelineup"){ const d=ui.draft; d.status = state.games[ui.gid]&&state.games[ui.gid].status==="final" ? "final" : "lineup";
     if (d.status==="final" && draftIssues(ui.gid).length) d.status="lineup";
     state.games[ui.gid]=JSON.parse(JSON.stringify(d)); persist(); ui.view="bracket"; }
-  else if (a==="final"){ ui.draft.status="final"; state.games[ui.gid]=JSON.parse(JSON.stringify(ui.draft)); persist();
+  else if (a==="final"){ ui.draft.status="final"; ui.draft.at = ui.draft.at || Date.now(); state.games[ui.gid]=JSON.parse(JSON.stringify(ui.draft)); persist();
     ui.view = ui.gid===FINAL() ? "conn" : "bracket"; }
   else if (a==="cleargame"){ delete state.games[ui.gid]; persist(); ui.view="bracket"; }
   else if (a==="tab"){ ui.tab=b.dataset.t; }
