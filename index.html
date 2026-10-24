@@ -186,6 +186,11 @@ tr:nth-child(even) td{background:rgba(0,0,0,.18)}
 .cand b{font-family:var(--pix);font-size:9px;font-weight:400}
 .ideas{font-size:19px;display:flex;flex-direction:column;gap:4px}
 
+/* shared results (read only) and cup records */
+.match.ro{cursor:default}
+.match.ro:hover{border-color:var(--hi);box-shadow:none}
+.shareurl{width:100%;font-size:17px}
+
 @media (max-width:760px){
   .vs{grid-template-columns:1fr}
   .vsmid{justify-self:center}
@@ -222,6 +227,7 @@ const EAST = Object.keys(TEAMS).filter(k=>TEAMS[k][2]==="E").sort();
 const PCOLORS = ["#ff4a4a","#46a0ff","#f8d838","#46d67a"];
 const ROUND_NAMES = ["Round 1","Conference Semifinal","Conference Final","Stanley Cup Final"];
 const KEY = "ministick94.v1";
+const HKEY = "ministick94.history.v1";
 
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s);
@@ -278,7 +284,8 @@ function pickCard(label, id, team){
 
 /* ---------- state ---------- */
 let state = null;
-const ui = { view:"title", gid:null, draft:null, tab:"players", confirmNew:false };
+const ui = { view:"title", gid:null, draft:null, tab:"players", confirmNew:false, confirmDel:null, shareUrl:null, copied:false, notice:"" };
+let ro = false; /* true while looking at someone's shared link: nothing can be changed or saved */
 let db = null, dbReady = false, saveTimer = null, savedRemote = false, myDoc = null;
 
 function blank(){
@@ -330,7 +337,9 @@ function migrate(s){
 
 /* ---------- persistence ---------- */
 function persist(){
+  if (ro) return;
   state.updatedAt = Date.now();
+  syncHistory();
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {}
   clearTimeout(saveTimer);
   saveTimer = setTimeout(pushRemote, 350);
@@ -372,6 +381,7 @@ async function connectDb(){
       if (!state || (remote.updatedAt||0) > (state.updatedAt||0)){
         state = remote;
         migrate(state);
+        syncHistory();
         try { localStorage.setItem(KEY, d.json); } catch(e) {}
         if (ui.view==="title") render(); else render();
       }
@@ -381,6 +391,57 @@ async function connectDb(){
     }
     const el = $(".save"); if (el) el.outerHTML = saveTag();
   } catch(e) { /* stay on local storage */ }
+}
+
+/* ---------- cup records ---------- */
+/* finished tournaments are kept on this device, one summary each. A player's finish is the
+   deepest run of any team they played: 0 Cup winner, 1 runner-up, 2 lost a conference final,
+   3 lost a conference semifinal, 4 lost in round 1. */
+function loadHistory(){ try { return JSON.parse(localStorage.getItem(HKEY)) || []; } catch(e){ return []; } }
+function saveHistory(h){ try { localStorage.setItem(HKEY, JSON.stringify(h)); } catch(e) {} }
+const tid = s => "t"+s.createdAt;
+function summary(s){
+  const prev = state; state = s; /* the bracket helpers read the global state */
+  try {
+    if (winnerEntry(FINAL())==null) return null;
+    const best = {}, w = {}, l = {};
+    for (let g=0; g<NGAMES(); g++){
+      const gm = s.games[g]; if (!gm || gm.status!=="final") continue;
+      const win = gm.sides[0].score>gm.sides[1].score ? 0 : 1;
+      [0,1].forEach(si=>{
+        const o = gm.sides[si].owner; if (o==null) return;
+        if (si===win) w[o] = (w[o]||0)+1; else l[o] = (l[o]||0)+1;
+        const t = si===win ? (g===FINAL() ? 0 : null) : ROUNDS()-roundOf(g);
+        if (t!=null && (best[o]==null || t<best[o])) best[o] = t;
+      });
+    }
+    return { id: tid(s), name: s.name, date: s.updatedAt, size: SIZE(),
+      players: s.players.map((p,i)=>({ name: p.name, finish: best[i] ?? null, w: w[i]||0, l: l[i]||0 })) };
+  } finally { state = prev; }
+}
+function addToHistory(sm){ const h = loadHistory().filter(x=>x.id!==sm.id); h.push(sm); saveHistory(h); }
+function syncHistory(){
+  if (ro || !state || state.sample) return;
+  const sm = summary(state);
+  if (sm) addToHistory(sm);
+  else if (loadHistory().some(x=>x.id===tid(state))) saveHistory(loadHistory().filter(x=>x.id!==tid(state)));
+}
+const finishName = t => t==null ? "—" : t===0 ? "Cup winner" : t===1 ? "Runner-up" : "Out in "+ROUND_NAMES[4-t];
+
+/* ---------- share links ---------- */
+/* the whole tournament rides in the link after #r= so no server is needed. "z" means
+   compressed, "j" plain JSON for browsers without CompressionStream. */
+const b64url = bytes => { let bin = ""; bytes.forEach(b=>bin+=String.fromCharCode(b)); return btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); };
+const pipe = async (bytes, stream) => new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
+async function packState(s){
+  const bytes = new TextEncoder().encode(JSON.stringify(s));
+  if (window.CompressionStream){ try { return "z"+b64url(await pipe(bytes, new CompressionStream("deflate-raw"))); } catch(e) {} }
+  return "j"+b64url(bytes);
+}
+async function unpackState(str){
+  const bytes = Uint8Array.from(atob(str.slice(1).replace(/-/g,"+").replace(/_/g,"/")), c=>c.charCodeAt(0));
+  const raw = str[0]==="z" ? await pipe(bytes, new DecompressionStream("deflate-raw")) : bytes;
+  return JSON.parse(new TextDecoder().decode(raw));
 }
 
 /* ---------- views ---------- */
@@ -393,6 +454,8 @@ function render(){
   else if (ui.view==="game") h = vTop() + vGame();
   else if (ui.view==="stats") h = vTop() + vStats();
   else if (ui.view==="conn") h = vTop() + vConn();
+  else if (ui.view==="records") h = vTop() + vRecords();
+  else if (ui.view==="share") h = vTop() + vShare();
   app.innerHTML = h;
 }
 
@@ -401,13 +464,16 @@ function vTop(){
   return `<header class="bar">
     <button class="logo" data-act="home" aria-label="Main menu">MINI STICK '94</button>
     <span class="tname">${esc(state.name)}</span>
-    ${saveTag()}
+    ${ro?"":saveTag()}
     <nav class="nav">
       ${inPlay?`<button class="btn small${ui.view==="bracket"?" on":""}" data-act="go" data-v="bracket">Bracket</button>
       <button class="btn small${ui.view==="stats"?" on":""}" data-act="go" data-v="stats">Stats</button>`:""}
-      <button class="btn small" data-act="home">Menu</button>
+      <button class="btn small${ui.view==="records"?" on":""}" data-act="go" data-v="records">Records</button>
+      ${inPlay&&!ro&&!state.sample?`<button class="btn small${ui.view==="share"?" on":""}" data-act="share">Share</button>`:""}
+      ${ro?"":`<button class="btn small" data-act="home">Menu</button>`}
     </nav>
   </header>
+  ${ro?vSharedBanner():""}
   ${state.sample?`<div class="banner"><span class="pix">SAMPLE TOURNAMENT</span><span>Made-up players and results so you can look around. Start your own from the menu.</span></div>`:""}`;
 }
 
@@ -424,8 +490,10 @@ function vTitle(){
         ? `<p class="warn">${ui.confirmNew==="sample"?"Loading the sample":"Starting over"} erases ${esc(state.name)}. Sure?</p>
            <div class="row"><button class="btn primary" data-act="${ui.confirmNew}" data-sure="1">Yes, erase it</button><button class="btn" data-act="cancelNew">Keep it</button></div>`
         : `<button class="btn" data-act="new">New tournament</button>
-           <button class="btn" data-act="sample">Load a sample tournament</button>`}
+           <button class="btn" data-act="sample">Load a sample tournament</button>
+           <button class="btn" data-act="go" data-v="records">Cup records</button>`}
     </div>
+    ${ui.notice?`<p class="warn">${esc(ui.notice)}</p>`:""}
     <p class="muted" style="max-width:56ch">4, 8 or 16 teams, East vs West. 2 to 4 people. Each game, both sides pick one skater and one goalie from their NHL roster. A skater can only be used once per tournament. Goalies can play again.</p>
   </section>`;
 }
@@ -529,6 +597,7 @@ function matchCard(g){
       <span class="who" style="color:${who?PCOLORS[ctrl[s]]:"var(--dim)"}">${who?esc(who.name)+pick:"Winner of "+(g<8?"":"G"+(feeders(g)[s]+1))}</span>
       <span class="sc">${final?gm.sides[s].score:""}</span></div>`;
   }).join("");
+  if (ro) return `<div class="match ro">${rows}<div class="mfoot">G${g+1} · ${final?`FINAL${gm.ot?" / OT":""}`:ready?"NOT PLAYED YET":"WAITING"}</div></div>`;
   const foot = final ? `FINAL${gm.ot?" / OT":""}` : clash ? "SAME PLAYER · TAP TO SWAP" : gm ? "LINEUP SET" : ready ? "TAP TO PLAY" : "WAITING";
   return `<button class="match" data-act="open" data-g="${g}"${ready?"":" disabled"} aria-label="Game ${g+1}">${rows}<div class="mfoot${clash?" alert":""}">G${g+1} · ${foot}</div></button>`;
 }
@@ -541,7 +610,7 @@ function vBracket(){
   const cupCol = `<div class="bcol"><h3>STANLEY CUP FINAL</h3>${matchCard(F)}
     <div class="cup"><div class="trophy" aria-hidden="true"></div>
     ${champ?`<p class="champ">${esc(TEAMS[champ.team][0]+" "+TEAMS[champ.team][1]).toUpperCase()}<br>WIN THE CUP!</p><p>${esc(champOwner.name)} takes it.</p>
-      <button class="btn small" data-act="go" data-v="conn">${state.conn?"Conn Smythe: "+esc(pName(state.conn)):"Pick the Conn Smythe"}</button>`:`<p class="muted">Champion crowned here</p>`}
+      ${ro&&!state.conn?"":`<button class="btn small" data-act="go" data-v="conn">${state.conn?"Conn Smythe: "+esc(pName(state.conn)):"Pick the Conn Smythe"}</button>`}`:`<p class="muted">Champion crowned here</p>`}
     </div></div>`;
   const R = ROUNDS();
   const half = (r, west) => { const s=rstart(r), h=rcount(r)/2; return Array.from({length:h},(_,i)=>s+(west?i:h+i)); };
@@ -550,7 +619,7 @@ function vBracket(){
   for (let r=0; r<R-1; r++){ west.push(col(label(r,true), half(r,true))); east.unshift(col(label(r,false), half(r,false))); }
   const ncols = 2*(R-1)+1;
   return `<section class="panel">
-    <div class="row"><h2>PLAYOFF BRACKET · ${SIZE()} TEAMS</h2><span class="grow"></span><span class="muted">Tap a game to set lineups and enter the score.</span></div>
+    <div class="row"><h2>PLAYOFF BRACKET · ${SIZE()} TEAMS</h2><span class="grow"></span><span class="muted">${ro?"Shared results. Only the host can enter scores.":"Tap a game to set lineups and enter the score."}</span></div>
     <div class="bwrap"><div class="bracket" style="grid-template-columns:repeat(${ncols},minmax(172px,1fr));min-width:${ncols*180}px">
       ${west.join("")}${cupCol}${east.join("")}
     </div></div>
@@ -656,10 +725,14 @@ function vStats(){
       const w = r.filter(x=>x.win).length, gf = r.reduce((a,x)=>a+x.gf,0), ga = r.reduce((a,x)=>a+x.ga,0);
       const alive = state.entries.some((en,ei)=>en.owner===i && isAlive(ei));
       return {p,i,gp:r.length,w,l:r.length-w,gf,ga,diff:gf-ga,so:r.filter(x=>x.win&&x.ga===0).length,ot:r.filter(x=>x.win&&x.ot).length,alive};
-    }).sort((a,b)=>b.w-a.w||b.diff-a.diff||b.gf-a.gf);
-    body = table(["Player","GP","W","L","GF","GA","+/-","SO","OTW","Teams left"],
-      rows.map(r=>[`<i class="chip" style="background:${PCOLORS[r.i]}"></i>${esc(r.p.name)}`,r.gp,r.w,r.l,r.gf,r.ga,(r.diff>0?"+":"")+r.diff,r.so,r.ot,
-        state.entries.filter((en,ei)=>en.owner===r.i && isAlive(ei)).length]));
+    });
+    const sm = summary(state);
+    if (sm) rows.sort((a,b)=>(sm.players[a.i].finish??9)-(sm.players[b.i].finish??9)||b.w-a.w||b.diff-a.diff);
+    else rows.sort((a,b)=>b.w-a.w||b.diff-a.diff||b.gf-a.gf);
+    body = table(["Player",sm?"Finish":"Teams left","GP","W","L","GF","GA","+/-","SO","OTW"],
+      rows.map(r=>[`<i class="chip" style="background:${PCOLORS[r.i]}"></i>${esc(r.p.name)}`,
+        sm ? finishName(sm.players[r.i].finish) : state.entries.filter((en,ei)=>en.owner===r.i && isAlive(ei)).length,
+        r.gp,r.w,r.l,r.gf,r.ga,(r.diff>0?"+":"")+r.diff,r.so,r.ot]));
   } else if (ui.tab==="skaters"){
     const rows = F.filter(x=>x.skater).sort((a,b)=>b.gf-a.gf||a.g-b.g);
     body = table(["Skater","Pos","Team","Played for","Game","Team goals","Result"],
@@ -708,6 +781,51 @@ function isAlive(ei){
     if (gm && gm.status==="final"){ const w = winnerEntry(g); if ((entryOf(g,0)===ei || entryOf(g,1)===ei) && w!==ei) return false; }
   }
   return true;
+}
+
+/* cup records: every finished tournament saved on this device, totalled by player name */
+function vRecords(){
+  const h = loadHistory().sort((a,b)=>b.date-a.date);
+  const m = {};
+  h.forEach(t=>t.players.forEach(p=>{
+    const nm = String(p.name||"").trim(), k = nm.toLowerCase(); if (!k) return;
+    const r = m[k] = m[k] || { name:nm, n:0, cups:0, second:0, cf:0, w:0, l:0, best:null };
+    r.n++; r.w += p.w; r.l += p.l;
+    if (p.finish===0) r.cups++; else if (p.finish===1) r.second++; else if (p.finish===2) r.cf++;
+    if (p.finish!=null && (r.best==null || p.finish<r.best)) r.best = p.finish;
+  }));
+  const rows = Object.values(m).sort((a,b)=>b.cups-a.cups||b.second-a.second||b.cf-a.cf||(b.w-b.l)-(a.w-a.l));
+  const date = d => new Date(d).toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"});
+  const who = (t, f) => t.players.filter(p=>p.finish===f).map(p=>esc(p.name)).join(", ") || "—";
+  const past = h.map(t=>`<tr><td>${esc(t.name)}</td><td>${date(t.date)}</td><td>${who(t,0)}</td><td>${who(t,1)}</td><td class="num">${t.size}</td><td>${
+    ui.confirmDel===t.id ? `<button class="btn small primary" data-act="delrec" data-id="${esc(t.id)}" data-sure="1">Yes, remove</button> <button class="btn small" data-act="cancelDel">Keep</button>`
+                         : `<button class="btn small" data-act="delrec" data-id="${esc(t.id)}">Remove</button>`}</td></tr>`).join("");
+  return `<section class="panel"><h2>CUP RECORDS</h2>
+    ${rows.length ? table(["Player","Best finish","Cups","2nd","Conf. final","Played","W","L"],
+        rows.map(r=>[esc(r.name),finishName(r.best),r.cups,r.second,r.cf,r.n,r.w,r.l]))
+      : `<p class="empty">No finished tournaments yet. When a Stanley Cup Final is played, everyone's finish is saved here.</p>`}
+    <p class="muted">Kept on this device. Players are matched by name, so spell names the same way each time. When someone sends you a results link, open it and tap "Add to my cup records".</p>
+  </section>
+  ${h.length?`<section class="panel"><h2>PAST TOURNAMENTS</h2><div class="tscroll"><table><thead><tr><th>Tournament</th><th>Date</th><th>Champion</th><th>Runner-up</th><th class="num">Teams</th><th></th></tr></thead><tbody>${past}</tbody></table></div></section>`:""}`;
+}
+
+function vShare(){
+  return `<section class="panel"><h2>SHARE THE RESULTS</h2>
+    <p>Send this link to the group. Anyone who opens it sees the bracket and stats on their own device, and nothing they do changes your tournament.</p>
+    <p class="muted">The link is a snapshot of right now. After more games are played, come back here and send a new link.</p>
+    ${ui.shareUrl ? `<input class="shareurl" readonly value="${esc(ui.shareUrl)}" aria-label="Share link" onclick="this.select()">
+      <div class="row"><button class="btn primary" data-act="copyshare">${ui.copied?"Copied!":"Copy link"}</button>
+      ${navigator.share?`<button class="btn" data-act="sendshare">Send…</button>`:""}</div>`
+      : `<p class="muted">Making the link…</p>`}
+  </section>`;
+}
+function vSharedBanner(){
+  const sm = summary(state);
+  const have = sm && loadHistory().find(x=>x.id===sm.id);
+  const when = new Date(state.updatedAt).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+  return `<div class="banner"><span class="pix">SHARED RESULTS</span><span>Snapshot from ${esc(when)}. Look around. Nothing here can be changed.</span>
+    ${sm?(have&&have.date===sm.date?`<span class="pix">IN YOUR RECORDS ✓</span>`:`<button class="btn small" data-act="addrec">${have?"Update":"Add to"} my cup records</button>`):""}
+    <button class="btn small" data-act="exitview">Exit</button></div>`;
 }
 
 /* Conn Smythe */
@@ -771,7 +889,9 @@ function loadSample(){
 document.addEventListener("click", ev => {
   const b = ev.target.closest("[data-act]"); if (!b || b.disabled) return;
   const a = b.dataset.act;
-  if (a==="home"){ ui.view="title"; ui.confirmNew=false; }
+  if (ro && !["home","go","tab","addrec","exitview","delrec","cancelDel"].includes(a)) return;
+  if (a==="home" && ro){ ui.view="bracket"; }
+  else if (a==="home"){ ui.view="title"; ui.confirmNew=false; ui.notice=""; }
   else if (a==="continue"){ ui.view = state.stage==="bracket" ? "bracket" : "setup"; }
   else if (a==="new"){
     const exists = state && (state.stage==="bracket" || state.entries.some(e=>e.team)) && !state.sample;
@@ -817,6 +937,24 @@ document.addEventListener("click", ev => {
   else if (a==="cleargame"){ delete state.games[ui.gid]; persist(); ui.view="bracket"; }
   else if (a==="tab"){ ui.tab=b.dataset.t; }
   else if (a==="conn"){ state.conn = b.dataset.id; persist(); }
+  else if (a==="share"){
+    ui.view="share"; ui.shareUrl=null; ui.copied=false;
+    packState(state).then(d=>{ ui.shareUrl = location.origin+location.pathname+"#r="+d; if (ui.view==="share") render(); });
+  }
+  else if (a==="copyshare"){
+    const done = () => { ui.copied=true; if (ui.view==="share") render(); };
+    if (navigator.clipboard) navigator.clipboard.writeText(ui.shareUrl).then(done, ()=>$(".shareurl").select());
+    else $(".shareurl").select();
+    return;
+  }
+  else if (a==="sendshare"){ navigator.share({ title: state.name, text: state.name+" results", url: ui.shareUrl }).catch(()=>{}); return; }
+  else if (a==="addrec"){ const sm = summary(state); if (sm) addToHistory(sm); }
+  else if (a==="delrec"){
+    if (b.dataset.sure){ saveHistory(loadHistory().filter(x=>x.id!==b.dataset.id)); ui.confirmDel=null; }
+    else ui.confirmDel = b.dataset.id;
+  }
+  else if (a==="cancelDel"){ ui.confirmDel=null; }
+  else if (a==="exitview"){ history.replaceState(null, "", location.pathname+location.search); bootLocal(); return; }
   render();
 });
 function keepScroll(){
@@ -836,11 +974,20 @@ document.addEventListener("input", ev => {
   else if (k==="pname"){ state.players[+t.dataset.i].name = t.value || "Player "+(+t.dataset.i+1); persist(); }
 });
 
-/* boot */
-state = loadLocal();
-if (!state){ state = blank(); }
-migrate(state);
-render();
-connectDb();
+/* boot: a link with #r= opens someone's shared results read only, otherwise this device's tournament */
+function bootLocal(){
+  ro = false; state = loadLocal() || blank(); migrate(state); syncHistory();
+  ui.view = "title"; render(); window.scrollTo(0,0);
+  if (!db) connectDb();
+}
+const shared = /^#r=(.+)$/.exec(location.hash);
+if (shared){
+  ro = true;
+  $("#app").innerHTML = `<section class="panel"><p class="empty">Opening shared results…</p></section>`;
+  unpackState(shared[1]).then(s=>{ state = s; migrate(state); ui.view = "bracket"; render(); })
+    .catch(()=>{ history.replaceState(null, "", location.pathname+location.search); bootLocal();
+      ui.notice = "That results link didn't open. It may have been cut short when it was copied, so ask for it again."; render(); });
+} else bootLocal();
+window.addEventListener("hashchange", ()=>{ if (/^#r=/.test(location.hash)) location.reload(); });
 </script>
 
