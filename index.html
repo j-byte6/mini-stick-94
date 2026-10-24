@@ -1,0 +1,800 @@
+<title>Mini Stick '94</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+<style>
+/* Layout: one 16-bit console screen at a time (title, setup, bracket, faceoff, stats), bevelled blue menu panels on a scanlined navy field. Single dark look on purpose. */
+:root{
+  --navy:#050a33; --deep:#0b1663; --panel:#1b2e9c; --panel2:#13207a;
+  --hi:#5c78ee; --lo:#040a3f; --ink:#f3f5ff; --dim:#9db0ff;
+  --gold:#f8d838; --red:#ec3a3a; --ice:#e4ecff; --ok:#46d67a;
+  --pix:"Press Start 2P", "Courier New", monospace;
+  --txt:"VT323", "Courier New", monospace;
+  color-scheme:dark;
+}
+html,body{min-height:100%}
+body{
+  background:var(--navy);
+  background-image:repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 2px, transparent 2px 4px), radial-gradient(ellipse at 50% 0%, #142283 0%, var(--navy) 70%);
+  background-attachment:fixed;
+  color:var(--ink); font-family:var(--txt); font-size:20px; line-height:1.15;
+}
+#app{max-width:1340px;margin:0 auto;padding-block:18px 48px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:18px}
+h1,h2,h3,.pix{font-family:var(--pix);font-weight:400;letter-spacing:.04em;margin:0;text-wrap:balance}
+h2{font-size:14px;color:var(--gold);text-shadow:2px 2px 0 #000}
+h3{font-size:11px;color:var(--dim)}
+p{margin:0}
+.panel{background:linear-gradient(180deg,var(--panel),var(--panel2));border:3px solid;border-color:var(--hi) var(--lo) var(--lo) var(--hi);box-shadow:0 0 0 2px #000, 6px 6px 0 rgba(0,0,0,.45);padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.grow{flex:1 1 auto}
+.muted{color:var(--dim)}
+.warn{color:var(--gold)}
+.bad{color:var(--red)}
+.btn{font-family:var(--pix);font-size:11px;line-height:1.3;color:var(--gold);background:var(--deep);border:3px solid;border-color:var(--hi) var(--lo) var(--lo) var(--hi);padding:10px 14px 10px 26px;cursor:pointer;position:relative;text-transform:uppercase;text-align:left}
+.btn::before{content:"\25B6";position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:9px;opacity:0}
+.btn:hover,.btn:focus-visible{background:var(--gold);color:var(--navy);outline:none}
+.btn:hover::before,.btn:focus-visible::before{opacity:1;animation:blink .7s steps(1) infinite}
+.btn.primary{background:var(--red);color:#fff;border-color:#ff8a8a #6a0d0d #6a0d0d #ff8a8a}
+.btn.primary:hover,.btn.primary:focus-visible{background:var(--gold);color:var(--navy)}
+.btn.small{font-size:9px;padding:7px 10px 7px 22px}
+.btn[disabled]{opacity:.4;cursor:not-allowed;background:var(--deep);color:var(--dim)}
+.btn[disabled]::before{opacity:0}
+.btn.on{background:var(--gold);color:var(--navy)}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+input,select{font-family:var(--txt);font-size:20px;color:var(--ink);background:var(--lo);border:2px solid var(--hi);padding:4px 8px;min-width:0;max-width:100%}
+input:focus,select:focus{outline:2px solid var(--gold);outline-offset:1px}
+label{display:flex;flex-direction:column;gap:4px;font-size:18px;color:var(--dim)}
+
+/* top bar */
+.bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{font-family:var(--pix);font-size:13px;color:var(--gold);text-shadow:2px 2px 0 var(--red),4px 4px 0 #000;cursor:pointer;background:none;border:0;padding:0}
+.bar .tname{font-size:22px;color:var(--ink)}
+.save{font-family:var(--pix);font-size:8px;color:var(--ok)}
+.save.local{color:var(--gold)}
+.nav{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+
+/* title screen */
+.title{align-items:center;text-align:center;gap:22px;padding-block:34px}
+.title h1{font-size:clamp(26px,7vw,54px);color:var(--gold);text-shadow:3px 3px 0 var(--red),6px 6px 0 #000;line-height:1.2}
+.title .sub{font-family:var(--pix);font-size:clamp(11px,2.6vw,16px);color:var(--ice);text-shadow:2px 2px 0 #000}
+.press{font-family:var(--pix);font-size:10px;color:var(--ink);animation:blink 1.2s steps(1) infinite}
+.rink{width:min(420px,100%);aspect-ratio:2.2/1;max-width:100%;background:var(--ice);border:4px solid #000;border-radius:60px/27%;position:relative;box-shadow:0 0 0 3px var(--hi)}
+.rink i{position:absolute;top:0;bottom:0;width:6px}
+.rink .red{left:calc(50% - 3px);background:var(--red)}
+.rink .b1{left:33%;background:#2149d8}.rink .b2{right:33%;background:#2149d8}
+.rink .g1{left:9%;width:2px;background:var(--red)}.rink .g2{right:9%;width:2px;background:var(--red)}
+.rink b{position:absolute;left:50%;top:50%;width:22%;aspect-ratio:1;border:3px solid #2149d8;border-radius:50%;transform:translate(-50%,-50%)}
+.rink .puck{position:absolute;width:14px;height:9px;background:#000;border-radius:50%;top:46%;left:20%;animation:slide 3.2s ease-in-out infinite alternate}
+@keyframes slide{to{left:76%;top:58%}}
+.menu{display:flex;flex-direction:column;gap:10px;min-width:min(320px,100%)}
+.menu .btn{font-size:12px}
+
+/* setup */
+.steps{display:flex;gap:8px;flex-wrap:wrap}
+.step{font-family:var(--pix);font-size:9px;padding:6px 8px;border:2px solid var(--hi);color:var(--dim)}
+.step.cur{background:var(--gold);color:var(--navy);border-color:var(--gold)}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.chip{display:inline-block;width:14px;height:14px;border:2px solid #000;vertical-align:-2px;margin-right:6px}
+.confs{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.slot{display:grid;grid-template-columns:44px 1fr;gap:8px;align-items:center}
+.slot .seed{font-family:var(--pix);font-size:9px;color:var(--dim)}
+.pair{display:flex;flex-direction:column;gap:6px;padding:8px;border:2px dashed rgba(157,176,255,.35)}
+.pair.clash{border-color:var(--gold)}
+.orow{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}
+.counts{display:flex;gap:16px;flex-wrap:wrap;font-size:20px}
+
+.slot .btn.mv,.orow .btn.mv{padding:6px 8px;font-size:9px}
+.btn.mv::before{display:none}
+.draftorder{display:flex;flex-direction:column;gap:8px;max-width:520px}
+.dpick{display:flex;gap:10px;align-items:center;width:100%;text-align:left;font-family:var(--txt);font-size:19px;color:var(--ink);background:var(--deep);border:2px solid var(--panel);padding:5px 8px;cursor:pointer;min-width:0}
+.dpick .seed{font-family:var(--pix);font-size:9px;color:var(--gold);min-width:24px}
+.dpick:hover:not([disabled]),.dpick:focus-visible{border-color:var(--gold);outline:none;background:var(--panel)}
+.dpick.taken{opacity:.6;cursor:default}
+.dpick[disabled]{cursor:default}
+.clock{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;background:rgba(0,0,0,.3);border:3px solid var(--gold);padding:10px 14px}
+.clock .pix{font-size:10px;color:var(--gold);animation:blink 1.2s steps(1) infinite}
+.clock .who{font-family:var(--pix);font-size:16px}
+.board{margin:0;padding-left:28px;columns:2 260px;font-size:19px}
+.board li{margin-bottom:4px;break-inside:avoid}
+.mrow .sd{font-family:var(--pix);font-size:7px;color:var(--dim);min-width:10px}
+
+/* team badge */
+.badge{display:inline-grid;place-items:center;min-width:46px;height:26px;padding:0 4px;font-family:var(--pix);font-size:9px;color:var(--c2);background:var(--c1);border:2px solid #000;box-shadow:inset 0 -3px 0 rgba(0,0,0,.3);flex:none}
+.badge.big{min-width:96px;height:56px;font-size:18px;border-width:3px}
+
+/* bracket */
+.bwrap{overflow-x:auto;padding-bottom:6px}
+.bracket{display:grid;grid-template-columns:repeat(7,minmax(172px,1fr));gap:10px;min-width:1260px;align-items:stretch}
+.bcol{display:flex;flex-direction:column;gap:8px;justify-content:space-around}
+.bcol h3{text-align:center;font-size:8px;min-height:20px}
+.match{display:flex;flex-direction:column;background:var(--lo);border:2px solid var(--hi);padding:0;cursor:pointer;text-align:left;color:var(--ink);font-family:var(--txt);width:100%}
+.match:hover,.match:focus-visible{border-color:var(--gold);outline:none;box-shadow:0 0 0 2px var(--gold)}
+.match[disabled]{cursor:default;opacity:.55;box-shadow:none;border-color:var(--hi)}
+.mrow{display:grid;grid-template-columns:auto auto 1fr auto;gap:6px;align-items:center;padding:4px 6px;font-size:18px;min-width:0}
+.mrow + .mrow{border-top:1px solid rgba(157,176,255,.25)}
+.mrow .who{font-size:16px;line-height:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow .sc{font-family:var(--pix);font-size:12px;min-width:20px;text-align:right}
+.mrow.win{background:rgba(248,216,56,.14)}
+.mrow.win .sc{color:var(--gold)}
+.mrow.lose{opacity:.55}
+.mfoot{font-family:var(--pix);font-size:7px;color:var(--dim);padding:4px 6px;background:rgba(0,0,0,.25)}
+.mfoot.alert{color:var(--navy);background:var(--gold)}
+.cup{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.trophy{width:56px;height:70px;position:relative}
+.trophy::before{content:"";position:absolute;left:12px;right:12px;top:0;height:30px;background:linear-gradient(90deg,#9aa4b8,#f1f4fa,#9aa4b8);border-radius:0 0 50% 50%}
+.trophy::after{content:"";position:absolute;left:8px;right:8px;bottom:0;height:38px;background:repeating-linear-gradient(180deg,#c9d0dd 0 6px,#8c95a8 6px 8px);clip-path:polygon(25% 0,75% 0,100% 100%,0 100%)}
+.champ{font-family:var(--pix);font-size:10px;color:var(--gold);line-height:1.6}
+.banner{background:var(--gold);color:var(--navy);border:3px solid #000;padding:10px 14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.banner .pix{font-size:10px}
+
+/* faceoff */
+.vs{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:start}
+.vsmid{font-family:var(--pix);font-size:22px;color:var(--red);text-shadow:2px 2px 0 #000;align-self:center}
+.side{gap:12px}
+.thead{display:flex;gap:12px;align-items:center}
+.thead .nm{font-family:var(--pix);font-size:12px;line-height:1.5}
+.plist{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px;max-height:300px;overflow-y:auto;padding:4px;background:rgba(0,0,0,.25);border:2px solid var(--lo)}
+.pbtn{display:grid;grid-template-columns:30px 1fr auto;gap:6px;align-items:center;text-align:left;font-family:var(--txt);font-size:18px;color:var(--ink);background:var(--deep);border:2px solid var(--panel);padding:3px 6px;cursor:pointer;min-width:0}
+.pbtn .n{font-family:var(--pix);font-size:8px;color:var(--dim)}
+.pbtn .p{font-family:var(--pix);font-size:7px;color:var(--dim)}
+.pbtn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pbtn:hover,.pbtn:focus-visible{border-color:var(--gold);outline:none}
+.pbtn.sel{background:var(--gold);color:var(--navy);border-color:#000}
+.pbtn.sel .n,.pbtn.sel .p{color:var(--navy)}
+.pbtn[disabled]{opacity:.35;cursor:not-allowed;text-decoration:line-through}
+.picks{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pcard{display:flex;flex-direction:column;align-items:center;gap:6px;background:rgba(0,0,0,.3);border:3px solid;border-color:var(--lo) var(--hi) var(--hi) var(--lo);padding:10px 6px;text-align:center;min-width:0}
+.pcard h3{font-size:8px}
+.shot{width:100%;max-width:120px;aspect-ratio:1;background:linear-gradient(180deg,#9fb6ff,#4f6fd8);border:3px solid #000;position:relative;overflow:hidden;image-rendering:auto}
+.shot img{width:100%;height:100%;object-fit:cover;display:block}
+.shot .head{position:absolute;left:50%;top:16%;width:34%;aspect-ratio:1;border-radius:50%;background:var(--c1);transform:translateX(-50%);border:3px solid #000}
+.shot .body{position:absolute;left:14%;right:14%;bottom:-6%;height:42%;background:var(--c1);border:3px solid #000;border-radius:40% 40% 0 0;display:grid;place-items:center;font-family:var(--pix);font-size:16px;color:var(--c2)}
+.shot.none{background:repeating-linear-gradient(45deg,rgba(0,0,0,.25) 0 6px,transparent 6px 12px),var(--lo)}
+.shot.none .q{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--pix);font-size:22px;color:var(--dim)}
+.pcard .pn{font-family:var(--pix);font-size:9px;line-height:1.5;color:var(--gold);overflow-wrap:anywhere}
+.pcard .pm{font-size:17px;color:var(--dim)}
+.score{display:flex;align-items:center;gap:10px}
+.score output{font-family:var(--pix);font-size:34px;color:var(--gold);min-width:64px;text-align:center;text-shadow:3px 3px 0 #000}
+.issues{display:flex;flex-direction:column;gap:4px;font-size:19px}
+details summary{cursor:pointer;color:var(--dim);font-size:18px}
+.addp{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-top:8px}
+
+/* stats */
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.tscroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:19px;font-variant-numeric:tabular-nums}
+th{font-family:var(--pix);font-size:8px;color:var(--gold);text-align:left;padding:8px 8px;border-bottom:3px solid var(--hi);white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid rgba(157,176,255,.18);white-space:nowrap}
+td.num,th.num{text-align:right}
+tr:nth-child(even) td{background:rgba(0,0,0,.18)}
+.empty{color:var(--dim);font-size:20px;padding:10px 0}
+.cands{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.cand{display:flex;flex-direction:column;gap:2px;text-align:left;background:var(--deep);border:2px solid var(--panel);color:var(--ink);font-family:var(--txt);font-size:19px;padding:8px;cursor:pointer}
+.cand:hover,.cand:focus-visible{border-color:var(--gold);outline:none}
+.cand.sel{background:var(--gold);color:var(--navy)}
+.cand b{font-family:var(--pix);font-size:9px;font-weight:400}
+.ideas{font-size:19px;display:flex;flex-direction:column;gap:4px}
+
+@media (max-width:760px){
+  .vs{grid-template-columns:1fr}
+  .vsmid{justify-self:center}
+  .bar .tname{font-size:20px;width:100%;order:3}
+  .nav{margin-left:0}
+}
+</style>
+
+<div id="app"></div>
+
+<script>
+const ROSTER_RAW={"TOR":"C|73|Teddy Blueger;R|53|Easton Cowan;L|24|Brandon Duhaime;C|29|Bo Groulx;C|71|Vinni Lettieri;R|19|Zack MacEwen;R|86|Kirill Marchenko;C|34|Auston Matthews;L|92|Gavin McKenna;R|88|William Nylander;L|20|Nick Paul;C|96|Jack Roslovic;C|15|Colton Sissons;C|91|John Tavares;L|18|Miles Wood;D|3|Nick Blankenburg;D|95|Oliver Ekman-Larsson;D|22|Jake McCabe;D|82|Cole McWard;D|36|Dakota Mermis;D|43|Darren Raddysh;D|44|Morgan Rielly;D|83|Marshall Rifai;D|28|Troy Stecher;D|8|Chris Tanev;G|72|Sergei Bobrovsky;G|41|Anthony Stolarz","BOS":"C|39|Morgan Geekie;C|44|James Hagens;L|84|Tanner Jeannot;C|47|Mark Kastelic;C|92|Marat Khusnutdinov;C|52|Sean Kuraly;C|28|Elias Lindholm;C|93|Fraser Minten;C|11|Casey Mittelstadt;R|88|David Pastrnak;R|10|JJ Peterka;C|51|Matthew Poitras;C|18|Pavel Zacha;D|45|Jonathan Aspirot;D|17|Will Borgen;D|42|Frederic Brunet;D|75|Connor Clifton;D|27|Hampus Lindholm;D|6|Mason Lohrei;D|73|Charlie McAvoy;D|91|Nikita Zadorov;G|30|Michael DiPietro;G|1|Jeremy Swayman","BUF":"L|6|Zach Benson;C|10|Sam Carrick;R|15|Justin Danforth;R|91|Josh Doan;C|94|Konsta Helenius;C|48|Tyson Kozak;C|19|Peyton Krebs;C|20|Jiri Kulich;L|29|Beck Malenstyn;C|71|Ryan McLeod;C|9|Josh Norris;C|86|Noah Ostlund;R|22|Jack Quinn;C|72|Tage Thompson;L|17|Jason Zucker;D|46|Louis Crevier;D|26|Rasmus Dahlin;D|44|Dennis Gilbert;D|24|Matt Grzelcyk;D|73|Zach Metsa;D|25|Owen Power;D|23|Mattias Samuelsson;D|21|Conor Timmins;D|8|Olen Zellweger;G|92|Colten Ellis;G|1|Ukko-Pekka Luukkonen;G|34|Alex Lyon","DET":"C|22|Mason Appleton;L|33|Viktor Arvidsson;R|28|Michael Brandsegg-Nygård;L|37|J.T. Compher;C|18|Andrew Copp;C|29|Nate Danielson;R|93|Alex DeBrincat;C|58|Emmitt Finnie;C|92|Marco Kasper;R|55|Keegan Kolesar;C|71|Dylan Larkin;L|34|Carter Mazur;C|27|Michael Rasmussen;L|23|Lucas Raymond;D|8|Ben Chiarot;D|24|Andreas Englund;D|72|Justin Faulk;D|20|Albert Johansson;D|42|Anton Johansson;D|44|Axel Sandin-Pellikka;D|53|Moritz Seider;D|54|William Wallinder;G|36|John Gibson;G|35|Michal Postava;G|80|Daniil Tarasov","FLA":"C|16|Aleksander Barkov;C|9|Sam Bennett;C|20|Lars Eller;L|12|Jonah Gadjovich;R|21|Garnet Hathaway;L|14|Bokondji Imama;C|15|Anton Lundell;C|27|Eetu Luostarinen;L|63|Brad Marchand;L|29|Cole Reinhardt;C|13|Sam Reinhart;R|79|Cole Schwindt;L|8|Brady Tkachuk;L|19|Matthew Tkachuk;C|23|Carter Verhaeghe;L|95|Sandis Vilmanis;D|26|Uvis Balinskis;D|5|Aaron Ekblad;D|42|Gustav Forsling;D|6|Radko Gudas;D|3|Seth Jones;D|7|Dmitry Kulikov;D|77|Niko Mikkola;G|31|Cooper Black;G|25|Jacob Markstrom;G|40|Akira Schmid","MTL":"R|17|Josh Anderson;C|62|Owen Beck;R|76|Zachary Bolduc;R|13|Cole Caufield;C|77|Kirby Dach;C|24|Phillip Danault;R|93|Ivan Demidov;C|71|Jake Evans;C|91|Oliver Kapanen;L|22|Chris Kreider;C|15|Alex Newhook;L|20|Juraj Slafkovský;C|14|Nick Suzuki;L|85|Alexandre Texier;L|63|Florian Xhekaj;D|45|Alexandre Carrier;D|53|Noah Dobson;D|42|Adam Engstrom;D|21|Kaiden Guhle;D|48|Lane Hutson;D|8|Mike Matheson;D|72|Arber Xhekaj;G|75|Jakub Dobes;G|32|Jacob Fowler;G|35|Samuel Montembeault","OTT":"R|22|Michael Amadio;R|19|Drake Batherson;L|95|Andre Burakovsky;C|21|Nick Cousins;C|24|Dylan Cozens;L|27|William Eklund;L|37|Warren Foegele;R|28|Claude Giroux;C|71|Ridly Greig;C|34|Stephen Halliday;R|42|Hayden Hodgson;C|12|Shane Pinto;C|18|Tim Stützle;L|20|Fabian Zetterlund;D|72|Thomas Chabot;D|5|Cameron Crotty;D|43|Tyler Kleven;D|33|Nikolas Matinpalo;D|85|Jake Sanderson;D|10|Jordan Spence;D|26|Carter Yakemchuk;D|2|Artem Zub;G|30|Samuel Ersson;G|31|Jonas Johansson;G|35|Linus Ullmark","TBL":"C|71|Anthony Cirelli;C|94|Conor Geekie;C|28|Zemgus Girgensons;C|93|Gage Goncalves;C|37|Yanni Gourde;C|59|Jake Guentzel;L|38|Brandon Hagel;R|29|Pontus Holmberg;C|17|Dominic James;R|86|Nikita Kucherov;R|95|Ilya Mikheyev;C|21|Brayden Point;R|49|Scott Sabourin;L|25|Jeffrey Viel;D|74|John Carlson;D|81|Erik Cernak;D|24|Max Crozier;D|51|Charle-Edouard D'Astous;D|77|Victor Hedman;D|78|Emil Lilleberg;D|27|Ryan McDonagh;D|90|J.J. Moser;G|35|Dennis Hildeby;G|88|Andrei Vasilevskiy","CAR":"C|20|Sebastian Aho;R|53|Jackson Blake;C|76|Skyler Brind'Amour;L|28|William Carrier;L|44|Nicolas Deslauriers;L|27|Nikolaj Ehlers;L|71|Taylor Hall;L|77|Mark Jankowski;R|24|Seth Jarvis;C|82|Jesperi Kotkaniemi;L|48|Jordan Martinook;L|50|Eric Robinson;C|11|Jordan Staal;C|22|Logan Stankoven;R|37|Andrei Svechnikov;R|36|Felix Unger Sörum;D|5|Jalen Chatfield;D|4|Shayne Gostisbehere;D|19|K'Andre Miller;D|6|Mike Reilly;D|74|Jaccob Slavin;D|8|Juuso Välimäki;D|26|Sean Walker;G|32|Brandon Bussi;G|52|Pyotr Kochetkov","CBJ":"C|3|Charlie Coyle;C|93|Luca Del Bel Belluz;C|19|Adam Fantilli;R|83|Conor Garland;L|58|Danton Heinen;C|91|Kent Johnson;L|89|Matthew Knies;L|94|Ryan Lomberg;C|23|Sean Monahan;R|43|Valeri Nichushkin;R|24|Mathieu Olivier;C|4|Cole Sillinger;L|10|Dmitri Voronkov;D|36|Emil Andrae;D|2|Jake Christiansen;D|15|Dante Fabbro;D|44|Erik Gudbranson;D|5|Denton Mateychuk;D|9|Ivan Provorov;D|78|Damon Severson;D|7|Carson Soucy;D|8|Zach Werenski;G|73|Jet Greaves;G|33|Cam Talbot","NJD":"C|70|Jesper Boqvist;L|63|Jesper Bratt;R|16|Connor Brown;R|77|Luke Evangelista;C|12|Cody Glass;R|81|Arseny Gritsyuk;C|13|Nico Hischier;C|86|Jack Hughes;C|93|Amadeus Lombardi;R|39|Anthony Mantha;R|28|Timo Meier;R|11|Stefan Noesen;C|17|Evan Rodrigues;D|47|Declan Chisholm;D|5|Brenden Dillon;D|7|Dougie Hamilton;D|43|Luke Hughes;D|8|Johnathan Kovacevic;D|22|Brett Pesce;D|71|Jonas Siegenthaler;G|34|Jake Allen;G|37|Connor Hellebuyck;G|1|Rémi Poirier","NYI":"R|26|Mitchell Chaffee;C|53|Casey Cizikas;L|11|Anthony Duclair;R|38|Victor Eklund;L|51|Emil Heineman;R|92|Simon Holmstrom;C|14|Bo Horvat;L|63|Matias Maccelli;C|32|Kyle MacLean;C|44|Jean-Gabriel Pageau;L|81|Ondrej Palat;C|21|Kyle Palmieri;C|64|Calum Ritchie;C|10|Brayden Schenn;D|77|Tony DeAngelo;D|4|Matthew Kessel;D|24|Scott Mayfield;D|3|Adam Pelech;D|6|Ryan Pulock;D|28|Alexander Romanov;D|48|Matthew Schaefer;D|8|Logan Stanley;G|30|Ilya Sorokin;G|40|Semyon Varlamov","NYR":"R|28|Oliver Bjorkstrand;L|50|Will Cuylle;R|16|Pavel Dorofeyev;C|43|Luke Glendening;L|24|Tye Kartye;C|42|Noah Laba;L|13|Alexis Lafrenière;C|10|J.T. Miller;R|94|Gabe Perreault;R|14|Taylor Raddysh;C|73|Matt Rempe;L|38|Adam Sykora;R|17|Eeli Tolvanen;C|90|Joseph Veleno;C|93|Mika Zibanejad;D|5|Sean Durzi;D|23|Adam Fox;D|44|Vladislav Gavrikov;D|60|Scott Morrow;D|26|Marcus Pettersson;D|4|Braden Schneider;D|12|Alberts Smits;G|33|Dylan Garand;G|70|Joonas Korpisalo;G|41|Spencer Martin;G|31|Igor Shesterkin","PHI":"C|52|Noel Acciari;C|86|Denver Barkey;L|20|Alex Bump;L|58|Michael Bunting;L|27|Noah Cates;C|14|Sean Couturier;C|22|Christian Dvorak;R|71|Tyson Foerster;C|78|Jacob Gaucher;R|17|Nikita Grebenkin;R|54|Cole Knuble;R|11|Travis Konecny;R|94|Porter Martone;R|39|Matvei Michkov;C|23|Jack Studnicka;R|74|Owen Tippett;L|10|Garrett Wilson;C|46|Trevor Zegras;D|44|Simon Benoit;D|59|Oliver Bonk;D|9|Jamie Drysdale;D|5|David Jiricek;D|19|Hunter McDonald;D|55|Rasmus Ristolainen;D|6|Travis Sanheim;D|24|Nick Seeler;D|8|Cam York;G|80|Dan Vladar;G|53|Joseph Woll","PIT":"R|16|Justin Brazeau;R|59|Egor Chinakhov;C|87|Sidney Crosby;C|19|Connor Dewar;C|81|Ben Kindel;R|41|Ville Koivunen;L|62|Andrei Kuzmenko;C|22|Hendrix Lapierre;C|46|Blake Lizotte;C|71|Evgeni Malkin;R|2|Rutger McGroarty;C|18|Tommy Novak;R|67|Rickard Rakell;L|14|Nick Robertson;R|17|Bryan Rust;L|25|Elmer Soderblom;D|72|Declan Carlile;D|49|Samuel Girard;D|65|Erik Karlsson;D|6|Kaedan Korczak;D|58|Kris Letang;D|44|Chase Pietila;D|7|Ilya Solovyov;D|24|Spencer Stastney;D|57|Trevor van Riemsdyk;G|1|Sergei Murashov;G|37|Arturs Silovs","WSH":"R|72|Anthony Beauvillier;C|80|Pierre-Luc Dubois;R|53|Ethen Frank;C|22|Boone Jenner;R|25|Jordan Kyrou;R|9|Ryan Leonard;L|63|Ivan Miroshnichenko;L|8|Alex Ovechkin;L|21|Aliaksei Protas;L|62|Ilya Protas;C|34|Justin Sourdif;C|17|Dylan Strome;R|89|Alex Tuch;R|43|Tom Wilson;D|6|Jakob Chychrun;D|73|Vincent Desharnais;D|42|Martin Fehérváry;D|44|Cole Hutson;D|27|Timothy Liljegren;D|52|Dylan McIlrath;D|3|Matt Roy;D|38|Rasmus Sandin;G|79|Charlie Lindgren;G|48|Logan Thompson","CHI":"C|98|Connor Bedard;L|59|Tyler Bertuzzi;C|8|Ryan Donato;C|16|Anton Frondell;C|20|Ryan Greene;L|12|Jordan Greenway;R|88|Patrick Kane;R|80|Roman Kantserov;L|26|Andrew Mangiapane;C|11|Oliver Moore;C|91|Frank Nazar;R|22|Cole Smith;C|86|Teuvo Teravainen;C|25|Dominic Toninato;D|24|Bowen Byram;D|28|Ian Cole;D|38|Ethan Del Mastro;D|44|Wyatt Kaiser;D|14|Kevin Korchinski;D|55|Artyom Levshunov;D|6|Sam Rinzel;D|72|Alex Vlasic;G|30|Spencer Knight;G|40|Arvid Soderblom","COL":"R|13|T.J. Hughes;C|91|Nazem Kadri;C|17|Parker Kelly;L|68|Zachary L'Heureux;L|92|Gabriel Landeskog;L|62|Artturi Lehkonen;C|29|Nathan MacKinnon;L|16|Taylor Makar;C|88|Martin Necas;C|11|Brock Nelson;R|25|Logan O'Connor;C|10|Nicolas Roy;L|71|Jaden Schwartz;C|9|Fedor Svechkov;D|84|Brent Burns;D|47|Noah Juulsen;D|27|Brett Kulak;D|8|Cale Makar;D|70|Sam Malinski;D|42|Josh Manson;D|7|Devon Toews;G|39|Mackenzie Blackwood;G|41|Scott Wedgewood","DAL":"L|14|Jamie Benn;C|15|Colin Blackwell;C|10|Oskar Bäck;C|95|Matt Duchene;C|12|Radek Faksa;C|24|Roope Hintz;C|49|Justin Hryckowian;R|25|Arttu Hyry;C|53|Wyatt Johnston;L|22|Joel Kiviranta;L|16|David Perron;R|96|Mikko Rantanen;L|21|Jason Robertson;C|91|Tyler Seguin;C|18|Sam Steel;D|6|Lian Bichsel;D|28|Kyle Burroughs;D|20|Kyle Capobianco;D|55|Thomas Harley;D|4|Miro Heiskanen;D|23|Esa Lindell;D|5|Nils Lundkvist;D|57|Tyler Myers;G|1|Casey DeSmith;G|29|Jake Oettinger","MIN":"L|12|Matt Boldy;R|10|Bobby Brink;L|20|Blake Coleman;C|14|Joel Eriksson Ek;L|17|Marcus Foligno;L|71|Nick Foligno;R|38|Ryan Hartman;L|97|Kirill Kaprizov;L|61|Rieger Lorenz;C|47|Michael McCarron;C|19|Tyler Pitlick;R|49|Maxim Shabanov;C|78|Nico Sturm;C|13|Yakov Trenin;R|22|Danila Yurov;D|24|Zach Bogosian;D|25|Jonas Brodin;D|7|Brock Faber;D|43|Quinn Hughes;D|48|Daemon Hunt;D|26|Matt Kiersted;D|3|Olli Maatta;D|82|David Spacek;D|46|Jared Spurgeon;G|32|Filip Gustavsson;G|31|Calvin Pickard;G|30|Jesper Wallstedt","NSH":"C|22|Mavrik Bourque;C|79|Ross Colton;C|18|Jack Drury;C|84|Adam Edstrom;L|9|Filip Forsberg;L|21|Nils Hoglander;C|14|Alexander Kerfoot;C|81|Jonathan Marchessault;C|90|Ryan O'Reilly;C|51|Vitali Pinchuk;L|49|Reid Schaefer;C|91|Steven Stamkos;R|71|Matthew Wood;D|47|Jack Ahcan;D|41|Nicolas Hague;D|59|Roman Josi;D|46|Ilya Lyubushkin;D|48|Nick Perbix;D|76|Brady Skjei;D|3|Jayden Struble;D|85|William Trudeau;D|2|Adam Wilsby;G|29|Justus Annunen;G|74|Juuse Saros","STL":"R|29|Jonatan Berggren;L|89|Pavel Buchnevich;C|65|Dillon Dube;R|15|Dalibor Dvorsky;L|81|Dylan Holloway;L|49|Ross Johnston;C|41|Aleksanteri Kaskimaki;L|77|Connor McMichael;C|83|Mason McTavish;L|63|Jake Neighbours;R|21|Jimmy Snuggerud;C|28|Otto Stenberg;C|22|Pius Suter;C|18|Robert Thomas;R|13|Alexey Toropchenko;D|72|Justin Barron;D|6|Philip Broberg;D|25|Brandon Carlo;D|17|Cam Fowler;D|36|Adam Jiricek;D|23|Logan Mailloux;D|55|Colton Parayko;D|75|Tyler Tucker;G|50|Jordan Binnington;G|30|Joel Hofer","UTA":"L|50|Daniil But;L|53|Michael Carcone;C|92|Logan Cooley;L|67|Lawson Crouse;R|11|Dylan Guenther;C|27|Barrett Hayton;R|9|Clayton Keller;L|72|Anders Lee;C|22|Jack McBain;C|38|Liam O'Brien;C|8|Nick Schmaltz;C|82|Kevin Stenlund;C|16|Vincent Trocheck;R|56|Kailer Yamamoto;D|57|Nick DeSimone;D|10|Maveric Lamoureux;D|6|John Marino;D|20|Andrew Peeke;D|88|Nate Schmidt;D|98|Mikhail Sergachev;D|26|Dmitri Simashev;D|52|MacKenzie Weegar;G|33|Sebastian Cossa;G|70|Karel Vejmelka","WPG":"C|36|Morgan Barron;C|61|Viggo Björck;L|81|Kyle Connor;L|9|Alex Iafallo;L|45|Cole Koepke;C|93|Brad Lambert;C|17|Adam Lowry;C||Dawson Mercer;C|7|Vladislav Namestnikov;R|62|Nino Niederreiter;C|91|Cole Perfetti;R|27|Isak Rosen;C|55|Mark Scheifele;C|13|Gabriel Vilardi;D|77|Tyrel Bauer;D|2|Dylan DeMelo;D|38|Mario Ferraro;D|24|Haydn Fleury;D|44|Josh Morrissey;D|4|Neal Pionk;D|54|Dylan Samberg;D|6|Jack St. Ivany;G||Nico Daws;G|74|Stuart Skinner;G|33|Clay Stevenson","ANA":"C|91|Leo Carlsson;R|28|Judd Caulfield;R|12|Sam Colangelo;L|61|Cutter Gauthier;C|64|Mikael Granlund;L|18|A.J. Greer;L|17|Alex Killorn;R|40|Nikita Klepov;L|39|Jeff Malott;C|13|Nikita Nesterenko;C|25|Ryan Poehling;R|45|Beckett Sennecke;R|77|Frank Vatrano;C|42|Tim Washe;D|14|Drew Helleson;D|55|Tyson Hinds;D|4|Nick Jensen;D|2|Jackson LaCombe;D|67|Tristan Luneau;D|98|Pavel Mintyukov;D|3|Ian Moore;D|47|Noah Warren;G|1|Lukas Dostal;G|33|Ville Husso","CGY":"C|11|Mikael Backlund;C|38|Jonathan Castagna;R|27|Matt Coronato;L|86|Joel Farabee;C|16|Morgan Frost;R|92|Matvei Gridin;L|29|Samuel Honzek;L|10|Jonathan Huberdeau;C|18|Ben Jones;R|43|Adam Klapka;L|78|Brennan Othmann;C|76|Martin Pospisil;C|17|Yegor Sharangovich;C|22|Ryan Strome;L|61|Aydar Suniev;R|72|Maxim Tsyplakov;D|7|Kevin Bahl;D|44|Joel Hanley;D|37|Yan Kuznetsov;D|55|Jake Middleton;D|71|Simon Nemec;D|19|Zayne Parekh;D|28|Zach Whitecloud;G|1|Devin Cooley;G|32|Dustin Wolf","EDM":"C|34|Colton Dach;C|16|Jason Dickinson;C|29|Leon Draisaitl;L|26|Alex Formenton;C|10|Trent Frederic;C|19|Filip Hallander;L|53|Isaac Howard;L|18|Zach Hyman;C|13|Mattias Janmark;L|46|Max Jones;R|21|Mathieu Joseph;R|42|Kasperi Kapanen;C|97|Connor McDavid;R|43|Owen Michaels;C|93|Ryan Nugent-Hopkins;R|92|Vasily Podkolzin;C|22|Matt Savoie;D|2|Evan Bouchard;D|14|Mattias Ekholm;D|49|Ty Emberson;D|85|Shakir Mukhamadullin;D|5|Connor Murphy;D|75|Alec Regula;D|6|Ryan Shea;D|96|Jake Walman;G|30|Frederik Andersen;G|35|Tristan Jarry;G|27|Devon Levi;G|90|Matt Tomkins","LAK":"R|40|Joel Armia;R|55|Quinton Byfield;L|22|Kevin Fiala;L|56|Erik Haula;C|79|Samuel Helenius;R|9|Adrian Kempe;R|14|Alex Laferriere;C|21|Scott Laughton;L|47|Andre Lee;L|12|Trevor Moore;L|10|Artemi Panarin;R|90|Corey Perry;C|15|Alex Turcotte;R|17|Taylor Ward;R|25|Jared Wright;R|36|Mats Zuccarello;D|44|Mikey Anderson;D|5|Cody Ceci;D|92|Brandt Clarke;D|8|Drew Doughty;D|2|Brian Dumoulin;D|6|Joel Edmundson;D|64|Erik Gustafsson;G|31|Anton Forsberg;G|35|Darcy Kuemper","SJS":"C|71|Macklin Celebrini;L|92|Igor Chernyshov;C|10|Ty Dellandrea;R|81|Adam Gaudette;C|23|Barclay Goodrow;R|51|Collin Graf;L|27|Mason Marchment;C|77|Michael Misa;C|63|Zack Ostapchuk;L|44|Kiefer Sherwood;C|2|Will Smith;L|41|Ivar Stenberg;C|73|Tyler Toffoli;C|21|Alexander Wennberg;D|5|Nolan Allan;D|42|Luca Cagnoni;D|6|Sam Dickinson;D|7|Michael Kesselring;D|25|Darnell Nurse;D|9|Dmitry Orlov;D|65|Jacob Trouba;G|30|Yaroslav Askarov;G|33|Alex Nedeljkovic","SEA":"C|10|Matty Beniers;C|27|Berkly Catton;C|42|Curtis Douglas;R|7|Jordan Eberle;C|89|Frederick Gaudreau;R|84|Kaapo Kakko;L|19|Jared McCann;C|74|Bobby McMann;R|63|Jacob Melanson;C|59|Ben Meyers;C|44|Jake O'Brien;R|11|Mackie Samoskevich;C|9|Chandler Stephenson;C|26|Ryan Winterton;C|51|Shane Wright;D|29|Vince Dunn;D|41|Ryker Evans;D|8|Cale Fleury;D|6|Adam Larsson;D|55|Ryan Lindgren;D|28|Josh Mahura;D|62|Brandon Montour;D|46|Ville Ottavainen;G|35|Joey Daccord;G|31|Philipp Grubauer","VAN":"L|13|Arshdeep Bains;R|6|Brock Boeser;C|77|Filip Chytil;L|47|Paul Cotter;L|74|Jake DeBrusk;R|7|Brendan Gallagher;C|94|Linus Karlsson;R|88|Jonathan Lekkerimäki;L|18|Drew O'Connor;L|92|Liam Ohgren;C|40|Elias Pettersson;C|23|Marco Rossi;C|63|Max Sasson;D|55|Guillaume Brisebois;D|8|Zeev Buium;D|17|Filip Hronek;D|90|Victor Mancini;D|4|Jamie Oleksiak;D|25|Elias Pettersson;D|2|Luke Schenn;D|5|Tom Willander;G|35|Thatcher Demko;G|32|Kevin Lankinen;G|31|Leevi Meriläinen","VGK":"L|49|Ivan Barbashev;R|42|Braeden Bowman;L|24|Trevor Connelly;C|26|Nic Dowd;C|9|Jack Eichel;C|17|Marc Gatcomb;C|48|Tomas Hertl;R|10|Alexander Holtz;C|21|Brett Howden;C|71|William Karlsson;C|36|Raphael Lavoie;R|93|Mitch Marner;L|95|Victor Olofsson;R|61|Mark Stone;D|4|Rasmus Andersson;D|52|Dylan Coghlan;D|15|Noah Hanifin;D|14|Ville Heinola;D|5|Jeremy Lauzon;D|3|Brayden McNabb;D|27|Shea Theodore;D|29|Parker Wotherspoon;G|79|Carter Hart;G|33|Adin Hill"};
+
+const TEAMS = {
+  BOS:["Boston","Bruins","E","#FFB81C","#111111"], BUF:["Buffalo","Sabres","E","#003087","#FFB81C"],
+  DET:["Detroit","Red Wings","E","#CE1126","#FFFFFF"], FLA:["Florida","Panthers","E","#C8102E","#FFFFFF"],
+  MTL:["Montréal","Canadiens","E","#AF1E2D","#FFFFFF"], OTT:["Ottawa","Senators","E","#C52032","#111111"],
+  TBL:["Tampa Bay","Lightning","E","#002868","#FFFFFF"], TOR:["Toronto","Maple Leafs","E","#00205B","#FFFFFF"],
+  CAR:["Carolina","Hurricanes","E","#CC0000","#FFFFFF"], CBJ:["Columbus","Blue Jackets","E","#002654","#CE1126"],
+  NJD:["New Jersey","Devils","E","#CE1126","#111111"], NYI:["NY","Islanders","E","#00539B","#F47D30"],
+  NYR:["NY","Rangers","E","#0038A8","#FFFFFF"], PHI:["Philadelphia","Flyers","E","#F74902","#111111"],
+  PIT:["Pittsburgh","Penguins","E","#111111","#FCB514"], WSH:["Washington","Capitals","E","#041E42","#C8102E"],
+  CHI:["Chicago","Blackhawks","W","#CF0A2C","#111111"], COL:["Colorado","Avalanche","W","#6F263D","#FFFFFF"],
+  DAL:["Dallas","Stars","W","#006847","#FFFFFF"], MIN:["Minnesota","Wild","W","#154734","#EAAA00"],
+  NSH:["Nashville","Predators","W","#FFB81C","#041E42"], STL:["St. Louis","Blues","W","#002F87","#FCB514"],
+  UTA:["Utah","Mammoth","W","#6CACE4","#111111"], WPG:["Winnipeg","Jets","W","#041E42","#FFFFFF"],
+  ANA:["Anaheim","Ducks","W","#F47A38","#111111"], CGY:["Calgary","Flames","W","#C8102E","#F1BE48"],
+  EDM:["Edmonton","Oilers","W","#041E42","#FF4C00"], LAK:["Los Angeles","Kings","W","#111111","#FFFFFF"],
+  SJS:["San Jose","Sharks","W","#006D75","#FFFFFF"], SEA:["Seattle","Kraken","W","#001628","#99D9D9"],
+  VAN:["Vancouver","Canucks","W","#00205B","#FFFFFF"], VGK:["Vegas","Golden Knights","W","#B4975A","#111111"]
+};
+const WEST = Object.keys(TEAMS).filter(k=>TEAMS[k][2]==="W").sort();
+const EAST = Object.keys(TEAMS).filter(k=>TEAMS[k][2]==="E").sort();
+const PCOLORS = ["#ff4a4a","#46a0ff","#f8d838","#46d67a"];
+const ROUND_NAMES = ["Round 1","Conference Semifinal","Conference Final","Stanley Cup Final"];
+const KEY = "ministick94.v1";
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const shuffle = a => { a = a.slice(); for (let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
+const teamName = ab => TEAMS[ab] ? TEAMS[ab][1] : "—";
+const badge = (ab, big) => ab ? `<span class="badge${big?" big":""}" style="--c1:${TEAMS[ab][3]};--c2:${TEAMS[ab][4]}">${ab}</span>` : `<span class="badge${big?" big":""}" style="--c1:#222a55;--c2:#9db0ff">TBD</span>`;
+
+function roster(ab){
+  const base = (ROSTER_RAW[ab]||"").split(";").filter(Boolean);
+  const extra = (state && state.custom && state.custom[ab]) || [];
+  return base.concat(extra).map(s => {
+    const [pos,num,name] = s.split("|");
+    return { id: ab+"|"+pos+"|"+num+"|"+name, pos, num, name, g: pos==="G", d: pos==="D" };
+  });
+}
+const pName = id => id ? id.split("|")[3] : "";
+const pPos = id => id ? id.split("|")[1] : "";
+
+/* bracket geometry: games 0-7 R1 (0-3 West, 4-7 East), 8-11 R2, 12-13 conf finals, 14 Cup final */
+const roundOf = g => g<8?0:g<12?1:g<14?2:3;
+const feeders = g => g<8?null:g<12?[2*(g-8),2*(g-8)+1]:g<14?[8+2*(g-12),9+2*(g-12)]:[12,13];
+const nextOf = g => g<8?8+Math.floor(g/2):g<12?12+Math.floor((g-8)/2):g<14?14:null;
+const confOf = g => g===14?"F":([0,1,2,3,8,9,12].includes(g)?"W":"E");
+const gameNo = g => { const r=roundOf(g); const start=[0,8,12,14][r]; return g-start+1; };
+
+/* headshots: optional headshots.json published beside the page, keyed "TEAM|Full Name" */
+let HEADSHOTS = {};
+fetch("headshots.json").then(r=>r.ok?r.json():{}).then(j=>{ HEADSHOTS=j||{}; if (ui.view==="game") keepScroll(); }).catch(()=>{});
+function shot(id, team){
+  if (!id) return `<div class="shot none"><span class="q">?</span></div>`;
+  const [ab,pos,num,name] = id.split("|");
+  const src = HEADSHOTS[ab+"|"+name];
+  const c = `--c1:${TEAMS[team][3]};--c2:${TEAMS[team][4]}`;
+  return src ? `<div class="shot" style="${c}"><img src="${esc(src)}" alt="${esc(name)}"></div>`
+             : `<div class="shot" style="${c}" aria-hidden="true"><span class="head"></span><span class="body">${esc(num)}</span></div>`;
+}
+function pickCard(label, id, team){
+  return `<div class="pcard"><h3>${label}</h3>${shot(id, team)}
+    <span class="pn">${id?esc(pName(id)).toUpperCase():"NOT PICKED"}</span>
+    <span class="pm">${id?(pPos(id)==="G"?"Goalie":pPos(id)==="D"?"Defense":"Forward")+(id.split("|")[2]?" · #"+esc(id.split("|")[2]):""):"Choose below"}</span></div>`;
+}
+
+/* ---------- state ---------- */
+let state = null;
+const ui = { view:"title", gid:null, draft:null, tab:"players", confirmNew:false };
+let db = null, dbReady = false, saveTimer = null, savedRemote = false, myDoc = null;
+
+function blank(){
+  return { v:2, draftOrder:[], snake:true, picks:[], name:"Basement Cup", createdAt:Date.now(), updatedAt:Date.now(), sample:false, stage:"setup", step:1,
+    players:[{name:"Player 1"},{name:"Player 2"}],
+    entries:Array.from({length:16},()=>({team:null,owner:null})), games:{}, custom:{}, conn:null };
+}
+
+const SEEDPAIRS = [[0,7],[3,4],[1,6],[2,5]]; /* 1v8, 4v5, 2v7, 3v6 */
+function entryOf(g, side){
+  if (g<8) return state.v>=2 ? (g<4?0:8) + SEEDPAIRS[g%4][side] : 2*g+side;
+  const f = feeders(g)[side];
+  return winnerEntry(f);
+}
+function winnerEntry(g){
+  const gm = state.games[g];
+  if (!gm || gm.status!=="final") return null;
+  const w = gm.sides[0].score > gm.sides[1].score ? 0 : 1;
+  return entryOf(g, w);
+}
+function controller(g, side){
+  const gm = state.games[g];
+  if (gm && gm.sides[side] && gm.sides[side].owner!=null) return gm.sides[side].owner;
+  const e = entryOf(g, side);
+  return e==null ? null : state.entries[e].owner;
+}
+function usedSkaters(exceptGid){
+  const m = {};
+  for (const [gid, gm] of Object.entries(state.games)){
+    if (+gid===exceptGid) continue;
+    gm.sides.forEach((s,i)=>{ if (s.skater) m[s.skater] = {gid:+gid}; });
+  }
+  return m;
+}
+function locked(g){
+  const n = nextOf(g);
+  return n!=null && !!state.games[n];
+}
+
+/* ---------- persistence ---------- */
+function persist(){
+  state.updatedAt = Date.now();
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {}
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(pushRemote, 350);
+}
+async function pushRemote(){
+  if (!myDoc) return;
+  try {
+    await myDoc.set({ json: JSON.stringify(state), updatedAt: state.updatedAt });
+    savedRemote = true;
+  } catch(e){ savedRemote = false; }
+  const el = $(".save"); if (el) el.outerHTML = saveTag();
+}
+function saveTag(){
+  return savedRemote ? `<span class="save" title="Saved to your claude.ai account">● SAVED</span>`
+                     : `<span class="save local" title="Saved in this browser only. Sign in to claude.ai to keep it across devices.">● SAVED ON THIS DEVICE</span>`;
+}
+function loadLocal(){
+  try { const s = localStorage.getItem(KEY); if (s) return JSON.parse(s); } catch(e) {}
+  return null;
+}
+async function connectDb(){
+  try {
+    if (!window.claude || !window.claude.use) return;
+    /* each viewer gets their own private save under data/users/<their id> */
+    const [dbNs, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
+    if (!dbNs || !user) return;
+    db = dbNs;
+    const uid = await user.id();
+    if (!uid) return;
+    myDoc = db.collection("data/users/"+uid).doc("tournament");
+    let snap = await myDoc.get();
+    if (!snap.exists && user.isOwner()){
+      /* the owner's tournament from before per-person saves */
+      try { const old = await db.doc("tournaments/current").get(); if (old.exists) snap = old; } catch(e) {}
+    }
+    if (snap.exists){
+      const d = snap.data();
+      const remote = JSON.parse(d.json);
+      if (!state || (remote.updatedAt||0) > (state.updatedAt||0)){
+        state = remote;
+        if (!state.picks){ state.picks = []; state.snake = true; state.draftOrder = []; }
+        try { localStorage.setItem(KEY, d.json); } catch(e) {}
+        if (ui.view==="title") render(); else render();
+      }
+      savedRemote = true;
+    } else if (state){
+      await pushRemote();
+    }
+    const el = $(".save"); if (el) el.outerHTML = saveTag();
+  } catch(e) { /* stay on local storage */ }
+}
+
+/* ---------- views ---------- */
+function render(){
+  const app = $("#app");
+  let h = "";
+  if (ui.view==="title") h = vTitle();
+  else if (ui.view==="setup") h = vTop() + vSetup();
+  else if (ui.view==="bracket") h = vTop() + vBracket();
+  else if (ui.view==="game") h = vTop() + vGame();
+  else if (ui.view==="stats") h = vTop() + vStats();
+  else if (ui.view==="conn") h = vTop() + vConn();
+  app.innerHTML = h;
+}
+
+function vTop(){
+  const inPlay = state && state.stage==="bracket";
+  return `<header class="bar">
+    <button class="logo" data-act="home" aria-label="Main menu">MINI STICK '94</button>
+    <span class="tname">${esc(state.name)}</span>
+    ${saveTag()}
+    <nav class="nav">
+      ${inPlay?`<button class="btn small${ui.view==="bracket"?" on":""}" data-act="go" data-v="bracket">Bracket</button>
+      <button class="btn small${ui.view==="stats"?" on":""}" data-act="go" data-v="stats">Stats</button>`:""}
+      <button class="btn small" data-act="home">Menu</button>
+    </nav>
+  </header>
+  ${state.sample?`<div class="banner"><span class="pix">SAMPLE TOURNAMENT</span><span>Made-up players and results so you can look around. Start your own from the menu.</span></div>`:""}`;
+}
+
+function vTitle(){
+  const has = state && (state.stage==="bracket" || state.step>1 || state.entries.some(e=>e.team));
+  return `<section class="panel title">
+    <h1>MINI STICK<br>HOCKEY '94</h1>
+    <p class="sub">TIME TO DO THE HOCKEY!</p>
+    <div class="rink" aria-hidden="true"><i class="g1"></i><i class="b1"></i><i class="red"></i><i class="b2"></i><i class="g2"></i><b></b><span class="puck"></span></div>
+    <p class="press">PRESS START</p>
+    <div class="menu">
+      ${has?`<button class="btn primary" data-act="continue">Continue: ${esc(state.name)}</button>`:""}
+      ${ui.confirmNew
+        ? `<p class="warn">${ui.confirmNew==="sample"?"Loading the sample":"Starting over"} erases ${esc(state.name)}. Sure?</p>
+           <div class="row"><button class="btn primary" data-act="${ui.confirmNew}" data-sure="1">Yes, erase it</button><button class="btn" data-act="cancelNew">Keep it</button></div>`
+        : `<button class="btn" data-act="new">New tournament</button>
+           <button class="btn" data-act="sample">Load a sample tournament</button>`}
+    </div>
+    <p class="muted" style="max-width:56ch">16 teams, East vs West. 2 to 4 people. Each game, both sides pick one skater and one goalie from their NHL roster. A skater can only be used once per tournament. Goalies can play again.</p>
+  </section>`;
+}
+
+/* setup */
+function vSetup(){
+  const st = state.step;
+  const steps = ["Players","Teams & seeds","Draft order","Draft"].map((s,i)=>`<span class="step${st===i+1?" cur":""}">${i+1}. ${s}</span>`).join("");
+  let body = "";
+  if (st===1){
+    const n = state.players.length;
+    body = `<h2>WHO'S PLAYING?</h2>
+    <label>Tournament name <input id="tname" data-in="tname" value="${esc(state.name)}" maxlength="40"></label>
+    <div class="row"><span class="muted">Number of players</span>${[2,3,4].map(k=>`<button class="btn small${n===k?" on":""}" data-act="nplayers" data-n="${k}">${k}</button>`).join("")}</div>
+    <div class="pgrid">${state.players.map((p,i)=>`<label><span><i class="chip" style="background:${PCOLORS[i]}"></i>Player ${i+1}</span><input id="pname${i}" data-in="pname" data-i="${i}" value="${esc(p.name)}" maxlength="16"></label>`).join("")}</div>
+    <div class="row"><span class="grow"></span><button class="btn primary" data-act="step" data-s="2">Next: pick teams</button></div>`;
+  } else if (st===2){
+    const conf = (label, list, off) => `<div class="panel" style="background:rgba(0,0,0,.2)">
+      <h2>${label} CONFERENCE</h2>
+      ${[0,1,2,3,4,5,6,7].map(i=>{ const e=state.entries[off+i]; return `<div class="slot"><span class="seed">#${i+1}</span>
+        <div class="row" style="gap:6px;flex-wrap:nowrap">${badge(e.team)}<select id="team${off+i}" data-in="team" data-i="${off+i}" class="grow" aria-label="${label} seed ${i+1}">
+        <option value="">Pick a team</option>${list.map(t=>`<option value="${t}"${e.team===t?" selected":""}>${TEAMS[t][0]} ${TEAMS[t][1]}</option>`).join("")}</select>
+        <button class="btn small mv" data-act="move" data-i="${off+i}" data-d="-1"${i===0?" disabled":""} aria-label="Move up">▲</button><button class="btn small mv" data-act="move" data-i="${off+i}" data-d="1"${i===7?" disabled":""} aria-label="Move down">▼</button></div></div>`; }).join("")}
+      <div class="row"><button class="btn small" data-act="randconf" data-c="${off}">Random 8</button><button class="btn small" data-act="randconf" data-c="${off}" data-rep="1">Random, repeats OK</button></div>
+    </div>`;
+    const missing = state.entries.filter(e=>!e.team).length;
+    body = `<h2>PICK AND RANK 16 TEAMS</h2>
+    <p class="muted">Rank each conference 1 to 8 with the arrows. Round 1 is 1 vs 8, 2 vs 7, 3 vs 6 and 4 vs 5, so the top seeds can't meet until later. The same NHL team can be entered twice, but its skaters are shared: once one is used he's gone for both.</p>
+    ${state.picks.length?`<p class="warn">Changing teams or seeds restarts the draft.</p>`:""}
+    <div class="row"><button class="btn small" data-act="randall">Random all 16</button><button class="btn small" data-act="clearteams">Clear</button></div>
+    <div class="confs">${conf("WEST", WEST, 0)}${conf("EAST", EAST, 8)}</div>
+    <div class="row"><button class="btn" data-act="step" data-s="1">Back</button><span class="grow"></span>
+      ${missing?`<span class="warn">${missing} slot${missing>1?"s":""} still empty</span>`:""}
+      <button class="btn primary" data-act="step" data-s="3"${missing?" disabled":""}>Next: draft order</button></div>`;
+  } else if (st===3){
+    fixOrder();
+    const n = state.players.length;
+    const seq = Array.from({length:Math.min(2*n,16)},(_,p)=>state.players[onClock(p)].name);
+    body = `<h2>DRAFT ORDER</h2>
+    <p class="muted">Set who picks first. Randomize it or use the arrows.</p>
+    <div class="row"><button class="btn small" data-act="randorder">Randomize order</button></div>
+    <div class="draftorder">${state.draftOrder.map((pi,k)=>`<div class="orow"><span class="pix" style="font-size:12px;color:var(--gold)">${k+1}</span>
+      <span><i class="chip" style="background:${PCOLORS[pi]}"></i>${esc(state.players[pi].name)}</span>
+      <span class="row" style="gap:6px"><button class="btn small mv" data-act="ordmove" data-k="${k}" data-d="-1"${k===0?" disabled":""} aria-label="Move up">▲</button><button class="btn small mv" data-act="ordmove" data-k="${k}" data-d="1"${k===n-1?" disabled":""} aria-label="Move down">▼</button></span></div>`).join("")}</div>
+    <div class="row"><span class="muted">Style</span>
+      <button class="btn small${state.snake?" on":""}" data-act="snake" data-v="1">Snake</button>
+      <button class="btn small${!state.snake?" on":""}" data-act="snake" data-v="0">Same order every round</button></div>
+    <p class="muted">${state.snake?"Snake: the order flips each round, so whoever picks last in a round picks first in the next.":"Every round goes in the same order."} Picks go: ${esc(seq.join(", "))}…</p>
+    ${16%n?`<p class="muted">16 teams don't split evenly between ${n}, so the first ${16%n} in the order get one extra team.</p>`:""}
+    <div class="row"><button class="btn" data-act="step" data-s="2">Back</button><span class="grow"></span>
+      <button class="btn primary" data-act="step" data-s="4">Start the draft</button></div>`;
+  } else {
+    fixOrder();
+    const done = state.picks.length>=16;
+    const cur = done ? null : onClock(state.picks.length);
+    const counts = state.players.map((_,i)=>state.entries.filter(e=>e.owner===i).length);
+    const pool = (label, off) => `<div class="panel" style="background:rgba(0,0,0,.2)"><h2>${label}</h2>
+      ${[0,1,2,3,4,5,6,7].map(i=>{ const ei=off+i, e=state.entries[ei], taken=e.owner!=null;
+        return `<button class="dpick${taken?" taken":""}" data-act="draft" data-i="${ei}"${taken||done?" disabled":""}>
+          <span class="seed">#${i+1}</span>${badge(e.team)}<span class="grow">${esc(TEAMS[e.team][0]+" "+TEAMS[e.team][1])}</span>
+          ${taken?`<span style="color:${PCOLORS[e.owner]}">${esc(state.players[e.owner].name)}</span>`:`<span class="muted">vs #${8-i}</span>`}</button>`; }).join("")}</div>`;
+    body = `<h2>THE DRAFT</h2>
+    ${done?`<div class="banner"><span class="pix">DRAFT COMPLETE</span><span>All 16 teams have an owner.</span></div>`
+          :`<div class="clock"><span class="pix">ON THE CLOCK</span><span class="who" style="color:${PCOLORS[cur]}">${esc(state.players[cur].name)}</span><span class="muted">Pick ${state.picks.length+1} of 16</span></div>`}
+    <div class="counts">${state.players.map((p,i)=>`<span><i class="chip" style="background:${PCOLORS[i]}"></i>${esc(p.name)}: ${counts[i]}</span>`).join("")}</div>
+    <div class="confs">${pool("WEST",0)}${pool("EAST",8)}</div>
+    ${state.picks.length?`<div class="ideas"><h3>DRAFT BOARD</h3><ol class="board">${state.picks.map((ei,p)=>`<li><span style="color:${PCOLORS[state.entries[ei].owner]}">${esc(state.players[state.entries[ei].owner].name)}</span> took ${badge(state.entries[ei].team)} ${ei<8?"West":"East"} #${ei%8+1}</li>`).join("")}</ol></div>`:""}
+    <div class="row"><button class="btn" data-act="step" data-s="3">Back</button>
+      ${state.picks.length&&!done?`<button class="btn small" data-act="undopick">Undo last pick</button>`:""}
+      ${!done?`<button class="btn small" data-act="autodraft">Auto-pick the rest</button>`:`<button class="btn small" data-act="undopick">Undo last pick</button>`}
+      <span class="grow"></span>
+      <button class="btn primary" data-act="start"${done?"":" disabled"}>Drop the puck</button></div>`;
+  }
+  return `<section class="panel"><div class="steps">${steps}</div>${body}</section>`;
+}
+
+/* bracket */
+function matchCard(g){
+  const gm = state.games[g];
+  const ents = [entryOf(g,0), entryOf(g,1)];
+  const ready = ents[0]!=null && ents[1]!=null;
+  const final = gm && gm.status==="final";
+  const win = final ? (gm.sides[0].score>gm.sides[1].score?0:1) : null;
+  const ctrl = [controller(g,0), controller(g,1)];
+  const clash = ready && !final && ctrl[0]!=null && ctrl[0]===ctrl[1];
+  const rows = [0,1].map(s=>{
+    const e = ents[s]; const ent = e!=null ? state.entries[e] : null;
+    const who = ent ? state.players[ctrl[s]] : null;
+    const pick = gm && gm.sides[s].skater ? " · "+esc(pName(gm.sides[s].skater).split(" ").slice(-1)[0]) : "";
+    return `<div class="mrow${final?(win===s?" win":" lose"):""}"><span class="sd">${e!=null&&state.v>=2?e%8+1:""}</span>${badge(ent&&ent.team)}
+      <span class="who" style="color:${who?PCOLORS[ctrl[s]]:"var(--dim)"}">${who?esc(who.name)+pick:"Winner of "+(g<8?"":"G"+(feeders(g)[s]+1))}</span>
+      <span class="sc">${final?gm.sides[s].score:""}</span></div>`;
+  }).join("");
+  const foot = final ? `FINAL${gm.ot?" / OT":""}` : clash ? "SAME PLAYER · TAP TO SWAP" : gm ? "LINEUP SET" : ready ? "TAP TO PLAY" : "WAITING";
+  return `<button class="match" data-act="open" data-g="${g}"${ready?"":" disabled"} aria-label="Game ${g+1}">${rows}<div class="mfoot${clash?" alert":""}">G${g+1} · ${foot}</div></button>`;
+}
+function vBracket(){
+  const col = (title, ids) => `<div class="bcol"><h3>${title}</h3>${ids.map(matchCard).join("")}</div>`;
+  const champE = winnerEntry(14);
+  const champ = champE!=null ? state.entries[champE] : null;
+  const champOwner = champ ? state.players[controller(14, state.games[14].sides[0].score>state.games[14].sides[1].score?0:1)] : null;
+  const cupCol = `<div class="bcol"><h3>STANLEY CUP FINAL</h3>${matchCard(14)}
+    <div class="cup"><div class="trophy" aria-hidden="true"></div>
+    ${champ?`<p class="champ">${esc(TEAMS[champ.team][0]+" "+TEAMS[champ.team][1]).toUpperCase()}<br>WIN THE CUP!</p><p>${esc(champOwner.name)} takes it.</p>
+      <button class="btn small" data-act="go" data-v="conn">${state.conn?"Conn Smythe: "+esc(pName(state.conn)):"Pick the Conn Smythe"}</button>`:`<p class="muted">Champion crowned here</p>`}
+    </div></div>`;
+  return `<section class="panel">
+    <div class="row"><h2>PLAYOFF BRACKET</h2><span class="grow"></span><span class="muted">Tap a game to set lineups and enter the score.</span></div>
+    <div class="bwrap"><div class="bracket">
+      ${col("WEST · ROUND 1",[0,1,2,3])}${col("WEST · SEMIS",[8,9])}${col("WEST FINAL",[12])}
+      ${cupCol}
+      ${col("EAST FINAL",[13])}${col("EAST · SEMIS",[10,11])}${col("EAST · ROUND 1",[4,5,6,7])}
+    </div></div>
+  </section>`;
+}
+
+/* faceoff / game */
+function openGame(g){
+  const gm = state.games[g];
+  ui.gid = g;
+  ui.draft = gm ? JSON.parse(JSON.stringify(gm)) : { status:"lineup", ot:false,
+    sides:[0,1].map(s=>({ owner: controller(g,s), skater:null, goalie:null, score:0 })) };
+  ui.view = "game";
+  render(); window.scrollTo(0,0);
+}
+function draftIssues(g){
+  const d = ui.draft, out = [];
+  if (d.sides[0].owner===d.sides[1].owner) out.push("Same person on both sides. Hand one team to someone else.");
+  d.sides.forEach((s,i)=>{ const t = teamName(state.entries[entryOf(g,i)].team);
+    if (!s.skater) out.push(`${t}: pick a skater.`);
+    if (!s.goalie) out.push(`${t}: pick a goalie.`); });
+  if (d.sides[0].score===d.sides[1].score) out.push("No ties in the playoffs. Someone has to win.");
+  return out;
+}
+function vGame(){
+  const g = ui.gid, d = ui.draft;
+  const used = usedSkaters(g);
+  const isLocked = locked(g);
+  const side = s => {
+    const e = state.entries[entryOf(g,s)];
+    const ros = roster(e.team);
+    const sk = ros.filter(p=>!p.g), gl = ros.filter(p=>p.g);
+    const pb = (p, kind) => {
+      const u = kind==="skater" && used[p.id];
+      const other = kind==="skater" && d.sides[1-s].skater===p.id;
+      const sel = d.sides[s][kind]===p.id;
+      const dis = (u || other) && !sel;
+      return `<button class="pbtn${sel?" sel":""}" data-act="pick" data-s="${s}" data-k="${kind}" data-id="${esc(p.id)}"${dis||isLocked?" disabled":""} title="${u?"Used in game "+(u.gid+1):""}">
+        <span class="n">${p.num?"#"+esc(p.num):""}</span><span>${esc(p.name)}</span><span class="p">${esc(p.pos)}</span></button>`;
+    };
+    const left = sk.filter(p=>!used[p.id]).length;
+    return `<div class="panel side">
+      <div class="thead">${badge(e.team,true)}<div><div class="nm">${esc(TEAMS[e.team][0]).toUpperCase()}<br>${esc(TEAMS[e.team][1]).toUpperCase()}</div></div></div>
+      <div class="picks">${pickCard("SKATER", d.sides[s].skater, e.team)}${pickCard("GOALIE", d.sides[s].goalie, e.team)}</div>
+      <label>Controlled by <select id="ctrl${s}" data-in="ctrl" data-s="${s}"${isLocked?" disabled":""}>${state.players.map((p,i)=>`<option value="${i}"${d.sides[s].owner===i?" selected":""}>${esc(p.name)}${i===e.owner?"":" (stand-in)"}</option>`).join("")}</select></label>
+      <h3>SKATER · ${left} LEFT</h3>
+      <div class="plist">${sk.map(p=>pb(p,"skater")).join("")}</div>
+      <h3>GOALIE</h3>
+      <div class="plist" style="max-height:none">${gl.map(p=>pb(p,"goalie")).join("")}</div>
+      <details><summary>Player missing? Add one to this roster</summary>
+        <div class="addp">
+          <label>Pos <select id="apos${s}"><option value="C">F</option><option value="D">D</option><option value="G">G</option></select></label>
+          <label>No. <input id="anum${s}" inputmode="numeric" maxlength="2" style="width:3.2em"></label>
+          <label class="grow">Name <input id="aname${s}" maxlength="30"></label>
+          <button class="btn small" data-act="addp" data-s="${s}" data-t="${e.team}">Add</button>
+        </div></details>
+      <h3>GOALS</h3>
+      <div class="score"><button class="btn small" data-act="score" data-s="${s}" data-d="-1"${isLocked?" disabled":""} aria-label="One fewer goal">−</button>
+        <output>${d.sides[s].score}</output>
+        <button class="btn small" data-act="score" data-s="${s}" data-d="1"${isLocked?" disabled":""} aria-label="One more goal">+</button></div>
+    </div>`;
+  };
+  const issues = draftIssues(g);
+  const conf = confOf(g);
+  return `<section class="panel">
+    <div class="row"><h2>${conf==="F"?"STANLEY CUP FINAL":(conf==="W"?"WEST":"EAST")+" · "+ROUND_NAMES[roundOf(g)].toUpperCase()+" · GAME "+gameNo(g)}</h2><span class="grow"></span>
+      <button class="btn small" data-act="go" data-v="bracket">Back to bracket</button></div>
+    ${isLocked?`<p class="warn">The next round has started, so this game is locked.</p>`:""}
+    <div class="vs">${side(0)}<div class="vsmid">VS</div>${side(1)}</div>
+    <div class="row">
+      <label class="row" style="flex-direction:row;gap:8px;align-items:center"><input type="checkbox" id="ot" data-in="ot"${d.ot?" checked":""}${isLocked?" disabled":""}> Won in overtime</label>
+    </div>
+    ${!isLocked && issues.length?`<div class="issues">${issues.map(i=>`<span class="warn">▸ ${esc(i)}</span>`).join("")}</div>`:""}
+    ${!isLocked?`<div class="row"><button class="btn" data-act="savelineup">Save lineup only</button>
+      <span class="grow"></span>
+      ${state.games[g]?`<button class="btn small" data-act="cleargame">Clear this game</button>`:""}
+      <button class="btn primary" data-act="final"${issues.length?" disabled":""}>Final score</button></div>`:""}
+  </section>`;
+}
+
+/* stats */
+function finals(){
+  const out = [];
+  for (let g=0; g<15; g++){
+    const gm = state.games[g];
+    if (!gm || gm.status!=="final") continue;
+    [0,1].forEach(s=>{
+      const e = entryOf(g,s);
+      out.push({ g, s, e, team: state.entries[e].team, owner: gm.sides[s].owner, skater: gm.sides[s].skater, goalie: gm.sides[s].goalie,
+        gf: gm.sides[s].score, ga: gm.sides[1-s].score, win: gm.sides[s].score>gm.sides[1-s].score, ot: gm.ot });
+    });
+  }
+  return out;
+}
+function vStats(){
+  const F = finals();
+  const tabs = [["players","Standings"],["skaters","Skaters"],["goalies","Goalies"],["teams","Teams"],["games","Game log"]];
+  let body = "";
+  if (!F.length) body = `<p class="empty">No final scores yet. Play a game from the bracket and the numbers show up here.</p>`;
+  else if (ui.tab==="players"){
+    const rows = state.players.map((p,i)=>{
+      const r = F.filter(x=>x.owner===i);
+      const w = r.filter(x=>x.win).length, gf = r.reduce((a,x)=>a+x.gf,0), ga = r.reduce((a,x)=>a+x.ga,0);
+      const alive = state.entries.some((en,ei)=>en.owner===i && isAlive(ei));
+      return {p,i,gp:r.length,w,l:r.length-w,gf,ga,diff:gf-ga,so:r.filter(x=>x.win&&x.ga===0).length,ot:r.filter(x=>x.win&&x.ot).length,alive};
+    }).sort((a,b)=>b.w-a.w||b.diff-a.diff||b.gf-a.gf);
+    body = table(["Player","GP","W","L","GF","GA","+/-","SO","OTW","Teams left"],
+      rows.map(r=>[`<i class="chip" style="background:${PCOLORS[r.i]}"></i>${esc(r.p.name)}`,r.gp,r.w,r.l,r.gf,r.ga,(r.diff>0?"+":"")+r.diff,r.so,r.ot,
+        state.entries.filter((en,ei)=>en.owner===r.i && isAlive(ei)).length]));
+  } else if (ui.tab==="skaters"){
+    const rows = F.filter(x=>x.skater).sort((a,b)=>b.gf-a.gf||a.g-b.g);
+    body = table(["Skater","Pos","Team","Played for","Game","Team goals","Result"],
+      rows.map(x=>[esc(pName(x.skater)),pPos(x.skater),badge(x.team),esc(state.players[x.owner].name),"G"+(x.g+1),x.gf,x.win?"W":"L"]));
+  } else if (ui.tab==="goalies"){
+    const m = {};
+    F.filter(x=>x.goalie).forEach(x=>{ const k=x.goalie; m[k]=m[k]||{id:k,team:x.team,gp:0,w:0,ga:0,so:0}; m[k].gp++; m[k].w+=x.win?1:0; m[k].ga+=x.ga; m[k].so+=x.ga===0?1:0; });
+    const rows = Object.values(m).sort((a,b)=>(a.ga/a.gp)-(b.ga/b.gp)||b.w-a.w);
+    body = table(["Goalie","Team","GP","W","L","GA","GAA","SO"],
+      rows.map(r=>[esc(pName(r.id)),badge(r.team),r.gp,r.w,r.gp-r.w,r.ga,(r.ga/r.gp).toFixed(2),r.so]));
+  } else if (ui.tab==="teams"){
+    const rows = state.entries.map((en,ei)=>{ const r=F.filter(x=>x.e===ei); const w=r.filter(x=>x.win).length;
+      return {en,ei,gp:r.length,w,gf:r.reduce((a,x)=>a+x.gf,0),ga:r.reduce((a,x)=>a+x.ga,0),alive:isAlive(ei)}; })
+      .sort((a,b)=>b.w-a.w||(b.gf-b.ga)-(a.gf-a.ga));
+    body = table(["Team","Owner","GP","W","L","GF","GA","Status"],
+      rows.map(r=>[badge(r.en.team)+" "+esc(teamName(r.en.team)),esc(state.players[r.en.owner].name),r.gp,r.w,r.gp-r.w,r.gf,r.ga,r.alive?"Alive":"Out"]));
+  } else {
+    const games = []; for (let g=0; g<15; g++){ const gm=state.games[g]; if (gm&&gm.status==="final") games.push(g); }
+    body = table(["Game","Round","Winner","Score","Loser","Skaters","Goalies"],
+      games.map(g=>{ const gm=state.games[g]; const w=gm.sides[0].score>gm.sides[1].score?0:1, l=1-w;
+        const tw=state.entries[entryOf(g,w)].team, tl=state.entries[entryOf(g,l)].team;
+        return ["G"+(g+1),ROUND_NAMES[roundOf(g)],badge(tw)+" "+esc(state.players[gm.sides[w].owner].name),
+          `${gm.sides[w].score}–${gm.sides[l].score}${gm.ot?" OT":""}`,badge(tl)+" "+esc(state.players[gm.sides[l].owner].name),
+          esc(pName(gm.sides[w].skater))+" / "+esc(pName(gm.sides[l].skater)), esc(pName(gm.sides[w].goalie))+" / "+esc(pName(gm.sides[l].goalie))]; }));
+  }
+  let rec = "";
+  if (F.length){
+    const gs=[]; for (let g=0; g<15; g++){ const gm=state.games[g]; if (gm&&gm.status==="final") gs.push({g,m:Math.abs(gm.sides[0].score-gm.sides[1].score),t:gm.sides[0].score+gm.sides[1].score}); }
+    const big = gs.slice().sort((a,b)=>b.m-a.m)[0], hi = gs.slice().sort((a,b)=>b.t-a.t)[0];
+    rec = `<div class="ideas"><h3>TOURNAMENT RECORDS</h3>
+      <span>Biggest win: game ${big.g+1}, by ${big.m}</span><span>Highest scoring: game ${hi.g+1}, ${hi.t} goals</span>
+      <span>Shutouts: ${F.filter(x=>x.win&&x.ga===0).length} · Overtime games: ${gs.filter(x=>state.games[x.g].ot).length}</span></div>`;
+  }
+  return `<section class="panel"><h2>TOURNAMENT STATS</h2>
+    <div class="tabs">${tabs.map(([k,l])=>`<button class="btn small${ui.tab===k?" on":""}" data-act="tab" data-t="${k}">${l}</button>`).join("")}</div>
+    <div class="tscroll">${body}</div>${rec}
+    <p class="muted">Skater goals are the team's goals in the game he was picked for. Everything comes from the final scores.</p></section>`;
+}
+function table(head, rows){
+  if (!rows.length) return `<p class="empty">Nothing here yet.</p>`;
+  return `<table><thead><tr>${head.map((h,i)=>`<th${i>1?' class="num"':""}>${h}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td${i>1?' class="num"':""}>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+}
+function isAlive(ei){
+  for (let g=0; g<15; g++){
+    const gm = state.games[g];
+    if (gm && gm.status==="final"){ const w = winnerEntry(g); if ((entryOf(g,0)===ei || entryOf(g,1)===ei) && w!==ei) return false; }
+  }
+  return true;
+}
+
+/* Conn Smythe */
+function vConn(){
+  const ce = winnerEntry(14);
+  if (ce==null) return `<section class="panel"><p class="empty">Finish the Stanley Cup Final first.</p></section>`;
+  const F = finals().filter(x=>x.e===ce);
+  const sk = F.filter(x=>x.skater).map(x=>({id:x.skater, line:`${x.gf} team goals in G${x.g+1} (${x.win?"W":"L"} ${x.gf}–${x.ga})`, rank:x.gf}));
+  const gm = {}; F.forEach(x=>{ if(!x.goalie) return; const k=x.goalie; gm[k]=gm[k]||{id:k,gp:0,w:0,ga:0}; gm[k].gp++; gm[k].w+=x.win?1:0; gm[k].ga+=x.ga; });
+  const gl = Object.values(gm).map(r=>({id:r.id, line:`${r.w}-${r.gp-r.w}, ${(r.ga/r.gp).toFixed(2)} GAA`, rank:r.w*3-r.ga/r.gp}));
+  const all = sk.concat(gl).sort((a,b)=>b.rank-a.rank);
+  const team = state.entries[ce].team;
+  return `<section class="panel"><div class="row"><h2>CONN SMYTHE TROPHY</h2><span class="grow"></span><button class="btn small" data-act="go" data-v="bracket">Back to bracket</button></div>
+    <div class="row">${badge(team,true)}<p>Playoff MVP for the ${esc(TEAMS[team][0]+" "+TEAMS[team][1])}. Pick from the players they used this tournament. They're listed best first by the numbers.</p></div>
+    <div class="cands">${all.map(c=>`<button class="cand${state.conn===c.id?" sel":""}" data-act="conn" data-id="${esc(c.id)}"><b>${esc(pName(c.id))} · ${esc(pPos(c.id))}</b><span>${esc(c.line)}</span></button>`).join("")}</div>
+    ${state.conn?`<div class="banner"><span class="pix">CONN SMYTHE</span><span>${esc(pName(state.conn))}</span></div>`:""}
+  </section>`;
+}
+
+/* ---------- actions ---------- */
+function onClock(p){
+  const n = state.players.length, order = state.draftOrder;
+  const round = Math.floor(p/n), pos = p%n;
+  return order[state.snake && round%2 ? n-1-pos : pos];
+}
+function resetDraft(){
+  state.picks = []; state.entries.forEach(e=>e.owner=null);
+}
+function fixOrder(){
+  const n = state.players.length;
+  if (!state.draftOrder || state.draftOrder.length!==n || state.draftOrder.some(i=>i>=n)) state.draftOrder = Array.from({length:n},(_,i)=>i);
+}
+function dealOwners(){
+  const n = state.players.length;
+  const base = Array.from({length:16},(_,i)=>i%n);
+  for (let t=0; t<800; t++){
+    const o = shuffle(base);
+    let ok = true; for (let k=0;k<8;k++) if (o[entryOf(k,0)]===o[entryOf(k,1)]) { ok=false; break; }
+    if (ok || t===799){ o.forEach((v,i)=>state.entries[i].owner=v); return; }
+  }
+}
+function randomConf(off, rep){
+  const list = off===0?WEST:EAST;
+  const pick = rep ? Array.from({length:8},()=>list[Math.floor(Math.random()*list.length)]) : shuffle(list).slice(0,8);
+  pick.forEach((t,i)=>state.entries[off+i].team=t);
+}
+function loadSample(){
+  state = blank(); state.sample = true; state.name = "Sample Cup"; state.stage = "bracket";
+  state.players = [{name:"Alex"},{name:"Jordan"},{name:"Sam"}];
+  randomConf(0); randomConf(8); state.draftOrder = shuffle([0,1,2]);
+  while (state.picks.length<16){ const left=state.entries.map((e,i)=>i).filter(i=>state.entries[i].owner==null); const ei=left[Math.floor(Math.random()*Math.min(3,left.length))]; state.entries[ei].owner=onClock(state.picks.length); state.picks.push(ei); }
+  for (const g of [0,1,4,5,2]){
+    const sides = [0,1].map(s=>{ const ros = roster(state.entries[entryOf(g,s)].team); const used = usedSkaters(-1);
+      const sk = shuffle(ros.filter(p=>!p.g && !used[p.id]))[0]; const gl = shuffle(ros.filter(p=>p.g))[0];
+      return { owner: controller(g,s), skater: sk.id, goalie: gl.id, score: Math.floor(Math.random()*5) }; });
+    if (sides[0].score===sides[1].score) sides[Math.round(Math.random())].score++;
+    state.games[g] = { status:"final", ot: Math.random()<.2, sides };
+  }
+}
+
+document.addEventListener("click", ev => {
+  const b = ev.target.closest("[data-act]"); if (!b || b.disabled) return;
+  const a = b.dataset.act;
+  if (a==="home"){ ui.view="title"; ui.confirmNew=false; }
+  else if (a==="continue"){ ui.view = state.stage==="bracket" ? "bracket" : "setup"; }
+  else if (a==="new"){
+    const exists = state && (state.stage==="bracket" || state.entries.some(e=>e.team)) && !state.sample;
+    if (exists && !b.dataset.sure){ ui.confirmNew = "new"; }
+    else { state = blank(); ui.confirmNew=false; ui.view="setup"; persist(); }
+  }
+  else if (a==="cancelNew"){ ui.confirmNew=false; }
+  else if (a==="sample"){
+    if (state && !state.sample && (state.stage==="bracket" || state.entries.some(e=>e.team)) && !b.dataset.sure){ ui.confirmNew="sample"; }
+    else { loadSample(); ui.confirmNew=false; ui.view="bracket"; persist(); }
+  }
+  else if (a==="go"){ ui.view = b.dataset.v; }
+  else if (a==="nplayers"){
+    const n = +b.dataset.n; while (state.players.length<n) state.players.push({name:"Player "+(state.players.length+1)});
+    state.players.length = n; fixOrder(); resetDraft(); persist();
+  }
+  else if (a==="step"){ state.step = +b.dataset.s; persist(); window.scrollTo(0,0); }
+  else if (a==="randconf"){ randomConf(+b.dataset.c, !!b.dataset.rep); resetDraft(); persist(); }
+  else if (a==="randall"){ randomConf(0); randomConf(8); resetDraft(); persist(); }
+  else if (a==="clearteams"){ state.entries.forEach(e=>e.team=null); resetDraft(); persist(); }
+  else if (a==="move"){ const i=+b.dataset.i, j=i+(+b.dataset.d); const E=state.entries; [E[i],E[j]]=[E[j],E[i]]; resetDraft(); persist(); }
+  else if (a==="randorder"){ fixOrder(); state.draftOrder = shuffle(state.draftOrder); resetDraft(); persist(); }
+  else if (a==="ordmove"){ const k=+b.dataset.k, j=k+(+b.dataset.d); const O=state.draftOrder; [O[k],O[j]]=[O[j],O[k]]; resetDraft(); persist(); }
+  else if (a==="snake"){ state.snake = b.dataset.v==="1"; resetDraft(); persist(); }
+  else if (a==="draft"){ const ei=+b.dataset.i; if (state.entries[ei].owner==null && state.picks.length<16){ state.entries[ei].owner = onClock(state.picks.length); state.picks.push(ei); persist(); } }
+  else if (a==="undopick"){ const ei=state.picks.pop(); if (ei!=null) state.entries[ei].owner=null; persist(); }
+  else if (a==="autodraft"){ while (state.picks.length<16){ const left=state.entries.map((e,i)=>i).filter(i=>state.entries[i].owner==null); const ei=shuffle(left)[0]; state.entries[ei].owner=onClock(state.picks.length); state.picks.push(ei); } persist(); }
+  else if (a==="start"){ state.stage="bracket"; ui.view="bracket"; persist(); window.scrollTo(0,0); }
+  else if (a==="open"){ openGame(+b.dataset.g); return; }
+  else if (a==="pick"){ const s=+b.dataset.s, k=b.dataset.k; ui.draft.sides[s][k] = ui.draft.sides[s][k]===b.dataset.id ? null : b.dataset.id; keepScroll(); return; }
+  else if (a==="score"){ const s=+b.dataset.s; ui.draft.sides[s].score = Math.max(0, Math.min(99, ui.draft.sides[s].score + (+b.dataset.d))); keepScroll(); return; }
+  else if (a==="addp"){
+    const s=b.dataset.s, t=b.dataset.t, name=$("#aname"+s).value.trim().replace(/[|;]/g,""), num=$("#anum"+s).value.replace(/\D/g,""), pos=$("#apos"+s).value;
+    if (!name) { $("#aname"+s).focus(); return; }
+    state.custom[t] = state.custom[t]||[]; state.custom[t].push(pos+"|"+num+"|"+name); persist(); keepScroll(); return;
+  }
+  else if (a==="savelineup"){ const d=ui.draft; d.status = state.games[ui.gid]&&state.games[ui.gid].status==="final" ? "final" : "lineup";
+    if (d.status==="final" && draftIssues(ui.gid).length) d.status="lineup";
+    state.games[ui.gid]=JSON.parse(JSON.stringify(d)); persist(); ui.view="bracket"; }
+  else if (a==="final"){ ui.draft.status="final"; state.games[ui.gid]=JSON.parse(JSON.stringify(ui.draft)); persist();
+    ui.view = ui.gid===14 ? "conn" : "bracket"; }
+  else if (a==="cleargame"){ delete state.games[ui.gid]; persist(); ui.view="bracket"; }
+  else if (a==="tab"){ ui.tab=b.dataset.t; }
+  else if (a==="conn"){ state.conn = b.dataset.id; persist(); }
+  render();
+});
+function keepScroll(){
+  const lists = [...document.querySelectorAll(".plist")].map(el=>el.scrollTop);
+  const y = window.scrollY; render(); window.scrollTo(0,y);
+  document.querySelectorAll(".plist").forEach((el,i)=>el.scrollTop=lists[i]||0);
+}
+document.addEventListener("change", ev => {
+  const t = ev.target, k = t.dataset.in; if (!k) return;
+  if (k==="team"){ state.entries[+t.dataset.i].team = t.value||null; resetDraft(); persist(); render(); }
+  else if (k==="ctrl"){ ui.draft.sides[+t.dataset.s].owner = +t.value; keepScroll(); }
+  else if (k==="ot"){ ui.draft.ot = t.checked; }
+});
+document.addEventListener("input", ev => {
+  const t = ev.target, k = t.dataset.in; if (!k) return;
+  if (k==="tname"){ state.name = t.value || "Tournament"; persist(); const n=$(".bar .tname"); if (n) n.textContent=state.name; }
+  else if (k==="pname"){ state.players[+t.dataset.i].name = t.value || "Player "+(+t.dataset.i+1); persist(); }
+});
+
+/* boot */
+state = loadLocal();
+if (!state){ state = blank(); }
+if (!state.picks){ state.picks = []; state.snake = true; state.draftOrder = []; }
+render();
+connectDb();
+</script>
+
