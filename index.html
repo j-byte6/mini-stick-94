@@ -474,14 +474,14 @@ async function connectDb(){
 const HELP_KEY = "ministick94.seenHelp";
 const HELP = [
   ["WELCOME TO BARNBURNER", `<p>Run a mini stick or roller hockey playoff. One device runs the whole tournament: set it up once, then play each game and punch in the score.</p>
-    <ul><li><b>Size:</b> 4, 8 or 16 teams</li><li><b>Players:</b> who's playing (2 to 4)</li><li><b>Teams &amp; seeds:</b> pick and rank the NHL teams</li><li><b>Draft order:</b> who picks first</li><li><b>Draft:</b> take turns choosing teams</li></ul>`],
+    <ul><li><b>Size:</b> 4, 8 or 16 teams</li><li><b>Players:</b> who's playing (2 to 4)</li><li><b>Teams:</b> pick the NHL teams</li><li><b>Draft order:</b> who picks first</li><li><b>Draft:</b> take turns choosing teams, which sets the seeds</li></ul>`],
   ["SIZE AND PLAYERS", `<ul><li>Pick <b>4, 8 or 16 teams</b>. Half play in the West, half in the East, and the two conference champions meet in the Stanley Cup Final.</li>
     <li>Choose <b>2 to 4 players</b> and type their names. Each gets a colour that follows them through the bracket.</li></ul>`],
-  ["TEAMS AND SEEDS", `<ul><li>Pick the teams for each conference, or tap <b>Random</b>.</li>
-    <li>Rank them with the arrows. <b>#1 plays the lowest seed</b> in round 1, so the top teams meet later.</li>
+  ["TEAMS", `<ul><li>Pick the teams for each conference, or tap <b>Random</b>.</li>
     <li>You can enter the same NHL team twice, but its skaters are shared between both copies.</li></ul>`],
   ["THE DRAFT", `<ul><li>Set the <b>draft order</b> or randomize it. A <b>snake</b> draft flips the order each round.</li>
     <li>Whoever is <b>on the clock</b> taps a team to take it. Made a mistake? Tap <b>Undo</b>.</li>
+    <li><b>The draft sets the seeds.</b> The first team taken in a conference is its #1 seed, the last one taken is the lowest seed, and they meet in round 1.</li>
     <li>If the teams don't split evenly, the first picks get one extra team.</li></ul>`],
   ["GAME NIGHT", `<ul><li>Tap a game in the bracket. Each side picks <b>one skater and one goalie</b> from their NHL roster.</li>
     <li>A skater can only be used <b>once per tournament</b>. Goalies can play again.</li>
@@ -620,7 +620,7 @@ function vTitle(){
 /* setup */
 function vSetup(){
   const st = state.step;
-  const steps = ["Size","Players","Teams & seeds","Draft order","Draft"].map((s,i)=>`<span class="step${st===i+1?" cur":""}">${i+1}. ${s}</span>`).join("");
+  const steps = ["Size","Players","Teams","Draft order","Draft"].map((s,i)=>`<span class="step${st===i+1?" cur":""}">${i+1}. ${s}</span>`).join("");
   let body = "";
   if (st===1){
     const picked = state.entries.some(e=>e.team);
@@ -641,17 +641,16 @@ function vSetup(){
   } else if (st===3){
     const conf = (label, list, off) => `<div class="panel" style="background:rgba(0,0,0,.2)">
       <h2>${label} CONFERENCE</h2>
-      ${Array.from({length:CONF()},(_,i)=>i).map(i=>{ const e=state.entries[off+i]; return `<div class="slot"><span class="seed">#${i+1}</span>
-        <div class="row" style="gap:6px;flex-wrap:nowrap">${badge(e.team)}<select id="team${off+i}" data-in="team" data-i="${off+i}" class="grow" aria-label="${label} seed ${i+1}">
-        <option value="">Pick a team</option>${list.map(t=>`<option value="${t}"${e.team===t?" selected":""}>${TEAMS[t][0]} ${TEAMS[t][1]}</option>`).join("")}</select>
-        <button class="btn small mv" data-act="move" data-i="${off+i}" data-d="-1"${i===0?" disabled":""} aria-label="Move up">▲</button><button class="btn small mv" data-act="move" data-i="${off+i}" data-d="1"${i===CONF()-1?" disabled":""} aria-label="Move down">▼</button></div></div>`; }).join("")}
+      ${Array.from({length:CONF()},(_,i)=>i).map(i=>{ const e=state.entries[off+i]; return `<div class="slot">
+        <div class="row" style="gap:6px;flex-wrap:nowrap">${badge(e.team)}<select id="team${off+i}" data-in="team" data-i="${off+i}" class="grow" aria-label="${label} team ${i+1}">
+        <option value="">Pick a team</option>${list.map(t=>`<option value="${t}"${e.team===t?" selected":""}>${TEAMS[t][0]} ${TEAMS[t][1]}</option>`).join("")}</select></div></div>`; }).join("")}
       <div class="row"><button class="btn small" data-act="randconf" data-c="${off}">Random ${CONF()}</button><button class="btn small" data-act="randconf" data-c="${off}" data-rep="1">Random, repeats OK</button></div>
     </div>`;
     const missing = state.entries.filter(e=>!e.team).length;
-    const pairText = {8:"Round 1 is 1 vs 8, 2 vs 7, 3 vs 6 and 4 vs 5, so the top seeds can't meet until later.", 4:"Round 1 is 1 vs 4 and 2 vs 3.", 2:"The two teams play for the conference title."}[CONF()];
-    body = `<h2>PICK AND RANK ${SIZE()} TEAMS</h2>
-    <p class="muted">Rank each conference 1 to ${CONF()} with the arrows. ${pairText} The same NHL team can be entered twice, but its skaters are shared: once one is used he's gone for both.</p>
-    ${state.picks.length?`<p class="warn">Changing teams or seeds restarts the draft.</p>`:""}
+    const pairText = {8:"Round 1 is 1 vs 8, 2 vs 7, 3 vs 6 and 4 vs 5.", 4:"Round 1 is 1 vs 4 and 2 vs 3.", 2:"The two teams play for the conference title."}[CONF()];
+    body = `<h2>PICK ${SIZE()} TEAMS</h2>
+    <p class="muted">Pick ${CONF()} teams for each conference. The draft sets the seeds: the first team taken in a conference is its #1 seed and the last one taken is #${CONF()}. ${pairText} The same NHL team can be entered twice, but its skaters are shared: once one is used he's gone for both.</p>
+    ${state.picks.length?`<p class="warn">Changing teams restarts the draft.</p>`:""}
     <div class="row"><button class="btn small" data-act="randall">Random all ${SIZE()}</button><button class="btn small" data-act="clearteams">Clear</button></div>
     <div class="confs">${conf("WEST", WEST, 0)}${conf("EAST", EAST, CONF())}</div>
     <div class="row"><button class="btn" data-act="step" data-s="2">Back</button><span class="grow"></span>
@@ -679,11 +678,13 @@ function vSetup(){
     const done = state.picks.length>=SIZE();
     const cur = done ? null : onClock(state.picks.length);
     const counts = state.players.map((_,i)=>state.entries.filter(e=>e.owner===i).length);
-    const pool = (label, off) => `<div class="panel" style="background:rgba(0,0,0,.2)"><h2>${label}</h2>
+    const pool = (label, off) => { const nx = state.entries.slice(off,off+CONF()).filter(e=>e.owner!=null).length;
+      return `<div class="panel" style="background:rgba(0,0,0,.2)"><h2>${label}</h2>
+      <p class="muted">${nx<CONF()?`Next team taken here is the <b>#${nx+1} seed</b>.`:"All seeds set."}</p>
       ${Array.from({length:CONF()},(_,i)=>i).map(i=>{ const ei=off+i, e=state.entries[ei], taken=e.owner!=null;
         return `<button class="dpick${taken?" taken":""}" data-act="draft" data-i="${ei}"${taken||done?" disabled":""}>
-          <span class="seed">#${i+1}</span>${badge(e.team)}<span class="grow">${esc(TEAMS[e.team][0]+" "+TEAMS[e.team][1])}</span>
-          ${taken?`<span style="color:${PCOLORS[e.owner]}">${esc(state.players[e.owner].name)}</span>`:`<span class="muted">${CONF()>2?"vs #"+(CONF()-i):""}</span>`}</button>`; }).join("")}</div>`;
+          <span class="seed">${taken?"#"+(i+1):""}</span>${badge(e.team)}<span class="grow">${esc(TEAMS[e.team][0]+" "+TEAMS[e.team][1])}</span>
+          ${taken?`<span style="color:${PCOLORS[e.owner]}">${esc(state.players[e.owner].name)}</span>`:""}</button>`; }).join("")}</div>`; };
     body = `<h2>THE DRAFT</h2>
     ${done?`<div class="banner"><span class="pix">DRAFT COMPLETE</span><span>All ${SIZE()} teams have an owner.</span></div>`
           :`<div class="clock"><span class="pix">ON THE CLOCK</span><span class="who" style="color:${PCOLORS[cur]}">${esc(state.players[cur].name)}</span><span class="muted">Pick ${state.picks.length+1} of ${SIZE()}</span></div>`}
@@ -983,6 +984,14 @@ function onClock(p){
   const round = Math.floor(p/n), pos = p%n;
   return order[state.snake && round%2 ? n-1-pos : pos];
 }
+/* the draft sets the seeds: a team taken goes into its conference's next open seed */
+function takeTeam(ei){
+  const E = state.entries, off = ei<CONF()?0:CONF(), P = state.picks.map(i=>E[i]);
+  let k = off; while (E[k].owner!=null) k++;
+  const [e] = E.splice(ei,1); E.splice(k,0,e);
+  e.owner = onClock(P.length); P.push(e);
+  state.picks = P.map(x=>E.indexOf(x));
+}
 function resetDraft(){
   state.picks = []; state.entries.forEach(e=>e.owner=null);
 }
@@ -1008,7 +1017,7 @@ function loadSample(){
   state = blank(); state.sample = true; state.name = "Sample Cup"; state.stage = "bracket";
   state.players = [{name:"Alex"},{name:"Jordan"},{name:"Sam"}];
   randomConf(0); randomConf(CONF()); state.draftOrder = shuffle([0,1,2]);
-  while (state.picks.length<SIZE()){ const left=state.entries.map((e,i)=>i).filter(i=>state.entries[i].owner==null); const ei=left[Math.floor(Math.random()*Math.min(3,left.length))]; state.entries[ei].owner=onClock(state.picks.length); state.picks.push(ei); }
+  while (state.picks.length<SIZE()){ const left=state.entries.map((e,i)=>i).filter(i=>state.entries[i].owner==null); takeTeam(left[Math.floor(Math.random()*Math.min(3,left.length))]); }
   for (const g of [0,1,4,5,2]){
     const sides = [0,1].map(s=>{ const ros = roster(state.entries[entryOf(g,s)].team); const used = usedSkaters(-1);
       const sk = shuffle(ros.filter(p=>!p.g && !used[p.id]))[0]; const gl = shuffle(ros.filter(p=>p.g))[0];
@@ -1048,13 +1057,12 @@ document.addEventListener("click", ev => {
   else if (a==="randall"){ randomConf(0); randomConf(CONF()); resetDraft(); persist(); }
   else if (a==="size"){ const n=+b.dataset.n; if (n!==SIZE()){ state.size=n; state.entries=Array.from({length:n},()=>({team:null,owner:null})); state.games={}; state.conn=null; resetDraft(); persist(); } }
   else if (a==="clearteams"){ state.entries.forEach(e=>e.team=null); resetDraft(); persist(); }
-  else if (a==="move"){ const i=+b.dataset.i, j=i+(+b.dataset.d); const E=state.entries; [E[i],E[j]]=[E[j],E[i]]; resetDraft(); persist(); }
   else if (a==="randorder"){ fixOrder(); state.draftOrder = shuffle(state.draftOrder); resetDraft(); persist(); }
   else if (a==="ordmove"){ const k=+b.dataset.k, j=k+(+b.dataset.d); const O=state.draftOrder; [O[k],O[j]]=[O[j],O[k]]; resetDraft(); persist(); }
   else if (a==="snake"){ state.snake = b.dataset.v==="1"; resetDraft(); persist(); }
-  else if (a==="draft"){ const ei=+b.dataset.i; if (state.entries[ei].owner==null && state.picks.length<SIZE()){ state.entries[ei].owner = onClock(state.picks.length); state.picks.push(ei); persist(); } }
+  else if (a==="draft"){ const ei=+b.dataset.i; if (state.entries[ei].owner==null && state.picks.length<SIZE()){ takeTeam(ei); persist(); } }
   else if (a==="undopick"){ const ei=state.picks.pop(); if (ei!=null) state.entries[ei].owner=null; persist(); }
-  else if (a==="autodraft"){ while (state.picks.length<SIZE()){ const left=state.entries.map((e,i)=>i).filter(i=>state.entries[i].owner==null); const ei=shuffle(left)[0]; state.entries[ei].owner=onClock(state.picks.length); state.picks.push(ei); } persist(); }
+  else if (a==="autodraft"){ while (state.picks.length<SIZE()){ const left=state.entries.map((e,i)=>i).filter(i=>state.entries[i].owner==null); takeTeam(shuffle(left)[0]); } persist(); }
   else if (a==="start"){ state.stage="bracket"; ui.view="bracket"; persist(); window.scrollTo(0,0); }
   else if (a==="open"){ openGame(+b.dataset.g); return; }
   else if (a==="pick"){ const s=+b.dataset.s, k=b.dataset.k; ui.draft.sides[s][k] = ui.draft.sides[s][k]===b.dataset.id ? null : b.dataset.id; keepScroll(); return; }
