@@ -109,6 +109,18 @@ label{display:flex;flex-direction:column;gap:4px;font-size:18px;color:var(--dim)
 .sizebtn.on .num{color:var(--navy);text-shadow:none}
 .sizebtn.on .muted{color:var(--navy)}
 
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(2,5,30,.82);display:grid;place-items:center;
+  padding:max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));overflow-y:auto}
+.help{width:min(600px,100%);max-height:100%;overflow-y:auto}
+.help .hstep{font-family:var(--pix);font-size:9px;color:var(--dim)}
+.help h2{font-size:15px;line-height:1.5}
+.help ul{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px;font-size:20px}
+.help li::marker{color:var(--gold)}
+.help b{color:var(--gold);font-weight:400}
+.dots{display:flex;gap:6px}
+.dots i{width:10px;height:10px;background:var(--lo);border:2px solid var(--hi)}
+.dots i.on{background:var(--gold);border-color:var(--gold)}
+
 /* team badge */
 .badge{display:inline-grid;place-items:center;min-width:46px;height:26px;padding:0 4px;font-family:var(--pix);font-size:9px;color:var(--c2);background:var(--c1);border:2px solid #000;box-shadow:inset 0 -3px 0 rgba(0,0,0,.3);flex:none}
 .badge.big{min-width:96px;height:56px;font-size:18px;border-width:3px}
@@ -278,7 +290,7 @@ function pickCard(label, id, team){
 
 /* ---------- state ---------- */
 let state = null;
-const ui = { view:"title", gid:null, draft:null, tab:"players", confirmNew:false };
+const ui = { view:"title", gid:null, draft:null, tab:"players", confirmNew:false, help:null };
 let db = null, dbReady = false, saveTimer = null, savedRemote = false, myDoc = null;
 
 function blank(){
@@ -383,6 +395,43 @@ async function connectDb(){
   } catch(e) { /* stay on local storage */ }
 }
 
+/* first-time walkthrough */
+const HELP_KEY = "ministick94.seenHelp";
+const HELP = [
+  ["WELCOME TO MINI STICK '94", `<p>Run a mini stick hockey playoff at home. One device runs the whole tournament: set it up once, then play each game and punch in the score.</p>
+    <ul><li><b>Size:</b> 4, 8 or 16 teams</li><li><b>Players:</b> who's playing (2 to 4)</li><li><b>Teams &amp; seeds:</b> pick and rank the NHL teams</li><li><b>Draft order:</b> who picks first</li><li><b>Draft:</b> take turns choosing teams</li></ul>`],
+  ["SIZE AND PLAYERS", `<ul><li>Pick <b>4, 8 or 16 teams</b>. Half play in the West, half in the East, and the two conference champions meet in the Stanley Cup Final.</li>
+    <li>Choose <b>2 to 4 players</b> and type their names. Each gets a colour that follows them through the bracket.</li></ul>`],
+  ["TEAMS AND SEEDS", `<ul><li>Pick the teams for each conference, or tap <b>Random</b>.</li>
+    <li>Rank them with the arrows. <b>#1 plays the lowest seed</b> in round 1, so the top teams meet later.</li>
+    <li>You can enter the same NHL team twice, but its skaters are shared between both copies.</li></ul>`],
+  ["THE DRAFT", `<ul><li>Set the <b>draft order</b> or randomize it. A <b>snake</b> draft flips the order each round.</li>
+    <li>Whoever is <b>on the clock</b> taps a team to take it. Made a mistake? Tap <b>Undo</b>.</li>
+    <li>If the teams don't split evenly, the first picks get one extra team.</li></ul>`],
+  ["GAME NIGHT", `<ul><li>Tap a game in the bracket. Each side picks <b>one skater and one goalie</b> from their NHL roster.</li>
+    <li>A skater can only be used <b>once per tournament</b>. Goalies can play again.</li>
+    <li>If one person owns both teams in a game, change <b>Controlled by</b> to hand one side to someone else.</li>
+    <li>Enter the final score. <b>No ties</b>: tick overtime if it went extra.</li></ul>`],
+  ["STATS AND THE CUP", `<ul><li>The winner moves on automatically. Check <b>Stats</b> for standings, goalies and the game log.</li>
+    <li>After the Cup Final, pick the <b>Conn Smythe</b> playoff MVP from the champion's players.</li>
+    <li>Reopen this guide any time from <b>How to play</b> on the main menu.</li></ul>`]
+];
+function vHelp(){
+  const i = ui.help, last = i===HELP.length-1;
+  return `<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="help-title"><section class="panel help">
+    <div class="row"><span class="hstep">HOW TO PLAY · ${i+1} OF ${HELP.length}</span><span class="grow"></span><button class="btn small" data-act="helpclose">Skip</button></div>
+    <h2 id="help-title">${HELP[i][0]}</h2>
+    ${HELP[i][1]}
+    <div class="row"><div class="dots" aria-hidden="true">${HELP.map((_,k)=>`<i class="${k===i?"on":""}"></i>`).join("")}</div><span class="grow"></span>
+      ${i>0?`<button class="btn small" data-act="helpnav" data-d="-1">Back</button>`:""}
+      ${last?`<button class="btn primary" data-act="helpclose">Let's play</button>`:`<button class="btn primary" data-act="helpnav" data-d="1">Next</button>`}</div>
+  </section></div>`;
+}
+function closeHelp(){
+  ui.help = null;
+  try { localStorage.setItem(HELP_KEY, "1"); } catch(e) {}
+}
+
 /* ---------- views ---------- */
 function render(){
   const app = $("#app");
@@ -393,7 +442,9 @@ function render(){
   else if (ui.view==="game") h = vTop() + vGame();
   else if (ui.view==="stats") h = vTop() + vStats();
   else if (ui.view==="conn") h = vTop() + vConn();
+  if (ui.help!=null) h += vHelp();
   app.innerHTML = h;
+  if (ui.help!=null){ const f = app.querySelector(".help .btn.primary"); if (f) f.focus({preventScroll:true}); }
 }
 
 function vTop(){
@@ -405,6 +456,7 @@ function vTop(){
     <nav class="nav">
       ${inPlay?`<button class="btn small${ui.view==="bracket"?" on":""}" data-act="go" data-v="bracket">Bracket</button>
       <button class="btn small${ui.view==="stats"?" on":""}" data-act="go" data-v="stats">Stats</button>`:""}
+      <button class="btn small" data-act="help" aria-label="How to play">?</button>
       <button class="btn small" data-act="home">Menu</button>
     </nav>
   </header>
@@ -425,6 +477,7 @@ function vTitle(){
            <div class="row"><button class="btn primary" data-act="${ui.confirmNew}" data-sure="1">Yes, erase it</button><button class="btn" data-act="cancelNew">Keep it</button></div>`
         : `<button class="btn" data-act="new">New tournament</button>
            <button class="btn" data-act="sample">Load a sample tournament</button>`}
+      <button class="btn" data-act="help">How to play</button>
     </div>
     <p class="muted" style="max-width:56ch">4, 8 or 16 teams, East vs West. 2 to 4 people. Each game, both sides pick one skater and one goalie from their NHL roster. A skater can only be used once per tournament. Goalies can play again.</p>
   </section>`;
@@ -771,7 +824,10 @@ function loadSample(){
 document.addEventListener("click", ev => {
   const b = ev.target.closest("[data-act]"); if (!b || b.disabled) return;
   const a = b.dataset.act;
-  if (a==="home"){ ui.view="title"; ui.confirmNew=false; }
+  if (a==="help"){ ui.help = 0; }
+  else if (a==="helpnav"){ ui.help = Math.max(0, Math.min(HELP.length-1, ui.help + (+b.dataset.d))); }
+  else if (a==="helpclose"){ closeHelp(); }
+  else if (a==="home"){ ui.view="title"; ui.confirmNew=false; }
   else if (a==="continue"){ ui.view = state.stage==="bracket" ? "bracket" : "setup"; }
   else if (a==="new"){
     const exists = state && (state.stage==="bracket" || state.entries.some(e=>e.team)) && !state.sample;
@@ -824,6 +880,12 @@ function keepScroll(){
   const y = window.scrollY; render(); window.scrollTo(0,y);
   document.querySelectorAll(".plist").forEach((el,i)=>el.scrollTop=lists[i]||0);
 }
+document.addEventListener("keydown", ev => {
+  if (ui.help==null) return;
+  if (ev.key==="Escape"){ closeHelp(); render(); }
+  else if (ev.key==="ArrowRight" && ui.help<HELP.length-1){ ui.help++; render(); }
+  else if (ev.key==="ArrowLeft" && ui.help>0){ ui.help--; render(); }
+});
 document.addEventListener("change", ev => {
   const t = ev.target, k = t.dataset.in; if (!k) return;
   if (k==="team"){ state.entries[+t.dataset.i].team = t.value||null; resetDraft(); persist(); render(); }
@@ -840,6 +902,7 @@ document.addEventListener("input", ev => {
 state = loadLocal();
 if (!state){ state = blank(); }
 migrate(state);
+try { if (!localStorage.getItem(HELP_KEY)) ui.help = 0; } catch(e) {}
 render();
 connectDb();
 </script>
