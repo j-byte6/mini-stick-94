@@ -60,17 +60,22 @@ label{display:flex;flex-direction:column;gap:4px;font-size:18px;color:var(--dim)
 
 /* title screen */
 .title{align-items:center;text-align:center;gap:22px;padding-block:34px}
-.title h1{font-size:clamp(26px,7.5vw,60px);line-height:1.15;color:var(--fire)}
-.title h1 span{display:block;background:linear-gradient(180deg,#fff3a0 0%,var(--gold) 28%,var(--fire) 62%,var(--ember) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(3px 3px 0 #6a0d0d) drop-shadow(3px 3px 0 #000)}
-.title h1 .ice{background:linear-gradient(180deg,#ffffff 0%,var(--ice) 35%,var(--frost) 75%,#3f8fd8 100%);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(3px 3px 0 #0b3a8a) drop-shadow(3px 3px 0 #000)}
+.title h1{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;justify-content:center;align-items:center;font-size:clamp(24px,7.5vw,62px);line-height:1.15;color:var(--fire);pointer-events:none}
+.title h1 span{display:block;background:linear-gradient(180deg,#fff3a0 0%,var(--gold) 28%,var(--fire) 62%,var(--ember) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(2px 0 0 #000) drop-shadow(-2px 0 0 #000) drop-shadow(0 2px 0 #000) drop-shadow(0 -2px 0 #000) drop-shadow(3px 3px 0 #6a0d0d) drop-shadow(3px 3px 0 #000)}
+.title h1 .ice{background:linear-gradient(180deg,#ffffff 0%,var(--ice) 35%,var(--frost) 75%,#3f8fd8 100%);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(2px 0 0 #000) drop-shadow(-2px 0 0 #000) drop-shadow(0 2px 0 #000) drop-shadow(0 -2px 0 #000) drop-shadow(3px 3px 0 #0b3a8a) drop-shadow(3px 3px 0 #000)}
 .title .sub{font-family:var(--pix);font-size:clamp(11px,2.6vw,16px);color:var(--ice);text-shadow:2px 2px 0 #000;line-height:1.6}
 .title .sub .f{color:var(--fire)}.title .sub .i{color:var(--frost)}
 .press{font-family:var(--pix);font-size:10px;color:var(--ink);animation:blink 1.2s steps(1) infinite}
-.rink{width:min(420px,100%);aspect-ratio:2.2/1;max-width:100%;background:var(--ice);border:4px solid #000;border-radius:60px/27%;position:relative;box-shadow:0 0 0 3px var(--hi)}
+.rink{width:min(600px,100%);aspect-ratio:2.2/1;max-width:100%;background:var(--ice);border:4px solid #000;border-radius:60px/27%;position:relative;box-shadow:0 0 0 3px var(--hi)}
 .rink i{position:absolute;top:0;bottom:0;width:6px}
 .rink .red{left:calc(50% - 3px);background:var(--red)}
 .rink .b1{left:33%;background:#2149d8}.rink .b2{right:33%;background:#2149d8}
 .rink .g1{left:9%;width:2px;background:var(--red)}.rink .g2{right:9%;width:2px;background:var(--red)}
+/* goal nets sit behind each goal line, open toward centre ice, with a blue crease in front */
+.rink .net{position:absolute;top:41%;height:18%;width:4.5%;border:3px solid var(--red);background:repeating-linear-gradient(0deg,rgba(0,0,0,.35) 0 1px,transparent 1px 4px),repeating-linear-gradient(90deg,rgba(0,0,0,.35) 0 1px,transparent 1px 4px),#fff}
+.rink .n1{right:calc(91% - 1px);border-right:0;border-radius:6px 0 0 6px}.rink .n2{left:calc(91% - 1px);border-left:0;border-radius:0 6px 6px 0}
+.rink .crease{position:absolute;top:41%;height:18%;width:5%;background:rgba(80,140,255,.45);border:2px solid var(--red)}
+.rink .c1{left:calc(9% + 2px);border-left:0;border-radius:0 50% 50% 0/0 50% 50% 0}.rink .c2{right:calc(9% + 2px);border-right:0;border-radius:50% 0 0 50%/50% 0 0 50%}
 .rink b{position:absolute;left:50%;top:50%;width:22%;aspect-ratio:1;border:3px solid #2149d8;border-radius:50%;transform:translate(-50%,-50%)}
 .rink .puck{position:absolute;width:14px;height:9px;background:#000;border-radius:50%;top:46%;left:20%;box-shadow:0 0 6px 3px var(--fire),0 0 14px 6px rgba(255,61,31,.55);animation:slide 3.2s ease-in-out infinite alternate,flicker .35s steps(2) infinite}
 @keyframes flicker{50%{box-shadow:0 0 4px 2px var(--gold),0 0 18px 8px rgba(255,122,26,.6)}}
@@ -468,7 +473,7 @@ async function connectDb(){
 /* first-time walkthrough */
 const HELP_KEY = "ministick94.seenHelp";
 const HELP = [
-  ["WELCOME TO BARNBURNER", `<p>Run a mini stick, roller or beer league hockey playoff. One device runs the whole tournament: set it up once, then play each game and punch in the score.</p>
+  ["WELCOME TO BARNBURNER", `<p>Run a mini stick or roller hockey playoff. One device runs the whole tournament: set it up once, then play each game and punch in the score.</p>
     <ul><li><b>Size:</b> 4, 8 or 16 teams</li><li><b>Players:</b> who's playing (2 to 4)</li><li><b>Teams &amp; seeds:</b> pick and rank the NHL teams</li><li><b>Draft order:</b> who picks first</li><li><b>Draft:</b> take turns choosing teams</li></ul>`],
   ["SIZE AND PLAYERS", `<ul><li>Pick <b>4, 8 or 16 teams</b>. Half play in the West, half in the East, and the two conference champions meet in the Stanley Cup Final.</li>
     <li>Choose <b>2 to 4 players</b> and type their names. Each gets a colour that follows them through the bracket.</li></ul>`],
@@ -592,9 +597,10 @@ function vTop(){
 function vTitle(){
   const has = state && (state.stage==="bracket" || state.step>1 || state.entries.some(e=>e.team));
   return `<section class="panel title">
-    <h1 aria-label="Barnburner"><span>BARN</span><span class="ice">BURNER</span></h1>
-    <p class="sub"><span class="f">FIRE</span> ON <span class="i">ICE</span>. LET'S RUN A BARNBURNER!</p>
-    <div class="rink" aria-hidden="true"><i class="g1"></i><i class="b1"></i><i class="red"></i><i class="b2"></i><i class="g2"></i><b></b><span class="puck"></span></div>
+    <div class="rink"><i class="g1" aria-hidden="true"></i><i class="b1" aria-hidden="true"></i><i class="red" aria-hidden="true"></i><i class="b2" aria-hidden="true"></i><i class="g2" aria-hidden="true"></i><b aria-hidden="true"></b>
+      <span class="crease c1" aria-hidden="true"></span><span class="crease c2" aria-hidden="true"></span><span class="net n1" aria-hidden="true"></span><span class="net n2" aria-hidden="true"></span><span class="puck" aria-hidden="true"></span>
+      <h1 aria-label="Barnburner"><span>BARN</span><span class="ice">BURNER</span></h1></div>
+    <p class="sub"><span class="f">FIRE</span> ON <span class="i">ICE</span></p>
     <p class="press">PRESS START</p>
     <div class="menu">
       ${has?`<button class="btn primary" data-act="continue">Continue: ${esc(state.name)}</button>`:""}
