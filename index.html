@@ -100,6 +100,15 @@ label{display:flex;flex-direction:column;gap:4px;font-size:18px;color:var(--dim)
 .board li{margin-bottom:4px;break-inside:avoid}
 .mrow .sd{font-family:var(--pix);font-size:7px;color:var(--dim);min-width:10px}
 
+.sizes{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.sizebtn{display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 12px;background:var(--deep);color:var(--ink);border:3px solid;border-color:var(--hi) var(--lo) var(--lo) var(--hi);cursor:pointer;font-family:var(--txt);font-size:18px;text-align:center}
+.sizebtn .num{font-family:var(--pix);font-size:40px;color:var(--gold);text-shadow:3px 3px 0 #000}
+.sizebtn .pix{font-size:10px}
+.sizebtn:hover,.sizebtn:focus-visible{border-color:var(--gold);outline:none}
+.sizebtn.on{background:var(--gold);color:var(--navy);border-color:#000}
+.sizebtn.on .num{color:var(--navy);text-shadow:none}
+.sizebtn.on .muted{color:var(--navy)}
+
 /* team badge */
 .badge{display:inline-grid;place-items:center;min-width:46px;height:26px;padding:0 4px;font-family:var(--pix);font-size:9px;color:var(--c2);background:var(--c1);border:2px solid #000;box-shadow:inset 0 -3px 0 rgba(0,0,0,.3);flex:none}
 .badge.big{min-width:96px;height:56px;font-size:18px;border-width:3px}
@@ -232,12 +241,23 @@ function roster(ab){
 const pName = id => id ? id.split("|")[3] : "";
 const pPos = id => id ? id.split("|")[1] : "";
 
-/* bracket geometry: games 0-7 R1 (0-3 West, 4-7 East), 8-11 R2, 12-13 conf finals, 14 Cup final */
-const roundOf = g => g<8?0:g<12?1:g<14?2:3;
-const feeders = g => g<8?null:g<12?[2*(g-8),2*(g-8)+1]:g<14?[8+2*(g-12),9+2*(g-12)]:[12,13];
-const nextOf = g => g<8?8+Math.floor(g/2):g<12?12+Math.floor((g-8)/2):g<14?14:null;
-const confOf = g => g===14?"F":([0,1,2,3,8,9,12].includes(g)?"W":"E");
-const gameNo = g => { const r=roundOf(g); const start=[0,8,12,14][r]; return g-start+1; };
+/* bracket geometry for 4, 8 or 16 teams. Games are numbered round by round; within a round
+   the first half is West and the second half East. The last game (SIZE-2) is the Cup final.
+   For 16 teams: 0-7 R1, 8-11 R2, 12-13 conference finals, 14 Cup final. */
+const SIZE = () => (state && state.size) || 16;
+const CONF = () => SIZE()/2;
+const ROUNDS = () => Math.log2(SIZE());
+const NGAMES = () => SIZE()-1;
+const FINAL = () => SIZE()-2;
+const rcount = r => SIZE()/2**(r+1);
+const rstart = r => { let s=0; for (let k=0;k<r;k++) s+=rcount(k); return s; };
+const roundOf = g => { let r=0; while (r<ROUNDS()-1 && g>=rstart(r+1)) r++; return r; };
+const idxIn = g => g - rstart(roundOf(g));
+const feeders = g => { const r=roundOf(g); if (r===0) return null; const i=idxIn(g), s=rstart(r-1); return [s+2*i, s+2*i+1]; };
+const nextOf = g => { const r=roundOf(g); return r===ROUNDS()-1 ? null : rstart(r+1)+Math.floor(idxIn(g)/2); };
+const confOf = g => g===FINAL() ? "F" : (idxIn(g) < rcount(roundOf(g))/2 ? "W" : "E");
+const gameNo = g => confOf(g)==="E" ? idxIn(g)-rcount(roundOf(g))/2+1 : idxIn(g)+1;
+const roundName = r => ROUND_NAMES[4-ROUNDS()+r];
 
 /* headshots: optional headshots.json published beside the page, keyed "TEAM|Full Name" */
 let HEADSHOTS = {};
@@ -262,14 +282,19 @@ const ui = { view:"title", gid:null, draft:null, tab:"players", confirmNew:false
 let db = null, dbReady = false, saveTimer = null, savedRemote = false, myDoc = null;
 
 function blank(){
-  return { v:2, draftOrder:[], snake:true, picks:[], name:"Basement Cup", createdAt:Date.now(), updatedAt:Date.now(), sample:false, stage:"setup", step:1,
+  return { v:2, size:16, draftOrder:[], snake:true, picks:[], name:"Basement Cup", createdAt:Date.now(), updatedAt:Date.now(), sample:false, stage:"setup", step:1,
     players:[{name:"Player 1"},{name:"Player 2"}],
     entries:Array.from({length:16},()=>({team:null,owner:null})), games:{}, custom:{}, conn:null };
 }
 
-const SEEDPAIRS = [[0,7],[3,4],[1,6],[2,5]]; /* 1v8, 4v5, 2v7, 3v6 */
+/* round 1 pairings by conference size: 1v8, 4v5, 2v7, 3v6 / 1v4, 2v3 / 1v2 */
+const SEEDPAIRS = {8:[[0,7],[3,4],[1,6],[2,5]], 4:[[0,3],[1,2]], 2:[[0,1]]};
 function entryOf(g, side){
-  if (g<8) return state.v>=2 ? (g<4?0:8) + SEEDPAIRS[g%4][side] : 2*g+side;
+  if (g<rcount(0)){
+    if (state.v<2) return 2*g+side;
+    const half = rcount(0)/2, west = g<half;
+    return (west?0:CONF()) + SEEDPAIRS[CONF()][west?g:g-half][side];
+  }
   const f = feeders(g)[side];
   return winnerEntry(f);
 }
@@ -296,6 +321,11 @@ function usedSkaters(exceptGid){
 function locked(g){
   const n = nextOf(g);
   return n!=null && !!state.games[n];
+}
+
+function migrate(s){
+  if (!s.picks){ s.picks = []; s.snake = true; s.draftOrder = []; }
+  if (!s.size){ s.size = 16; if (s.stage==="setup") s.step = (s.step||1) + 1; }
 }
 
 /* ---------- persistence ---------- */
@@ -341,7 +371,7 @@ async function connectDb(){
       const remote = JSON.parse(d.json);
       if (!state || (remote.updatedAt||0) > (state.updatedAt||0)){
         state = remote;
-        if (!state.picks){ state.picks = []; state.snake = true; state.draftOrder = []; }
+        migrate(state);
         try { localStorage.setItem(KEY, d.json); } catch(e) {}
         if (ui.view==="title") render(); else render();
       }
@@ -396,44 +426,54 @@ function vTitle(){
         : `<button class="btn" data-act="new">New tournament</button>
            <button class="btn" data-act="sample">Load a sample tournament</button>`}
     </div>
-    <p class="muted" style="max-width:56ch">16 teams, East vs West. 2 to 4 people. Each game, both sides pick one skater and one goalie from their NHL roster. A skater can only be used once per tournament. Goalies can play again.</p>
+    <p class="muted" style="max-width:56ch">4, 8 or 16 teams, East vs West. 2 to 4 people. Each game, both sides pick one skater and one goalie from their NHL roster. A skater can only be used once per tournament. Goalies can play again.</p>
   </section>`;
 }
 
 /* setup */
 function vSetup(){
   const st = state.step;
-  const steps = ["Players","Teams & seeds","Draft order","Draft"].map((s,i)=>`<span class="step${st===i+1?" cur":""}">${i+1}. ${s}</span>`).join("");
+  const steps = ["Size","Players","Teams & seeds","Draft order","Draft"].map((s,i)=>`<span class="step${st===i+1?" cur":""}">${i+1}. ${s}</span>`).join("");
   let body = "";
   if (st===1){
+    const picked = state.entries.some(e=>e.team);
+    body = `<h2>HOW BIG IS THE TOURNAMENT?</h2>
+    <p class="muted">Half the teams play in the West and half in the East. The conference champions meet in the Stanley Cup Final.</p>
+    <div class="sizes">${[4,8,16].map(n=>`<button class="sizebtn${SIZE()===n?" on":""}" data-act="size" data-n="${n}">
+      <span class="num">${n}</span><span class="pix">TEAMS</span>
+      <span class="muted">${n/2} per conference · ${Math.log2(n)} rounds · ${n-1} games</span></button>`).join("")}</div>
+    ${picked?`<p class="warn">Changing the size clears the teams and draft you've set up.</p>`:""}
+    <div class="row"><span class="grow"></span><button class="btn primary" data-act="step" data-s="2">Next: players</button></div>`;
+  } else if (st===2){
     const n = state.players.length;
     body = `<h2>WHO'S PLAYING?</h2>
     <label>Tournament name <input id="tname" data-in="tname" value="${esc(state.name)}" maxlength="40"></label>
     <div class="row"><span class="muted">Number of players</span>${[2,3,4].map(k=>`<button class="btn small${n===k?" on":""}" data-act="nplayers" data-n="${k}">${k}</button>`).join("")}</div>
     <div class="pgrid">${state.players.map((p,i)=>`<label><span><i class="chip" style="background:${PCOLORS[i]}"></i>Player ${i+1}</span><input id="pname${i}" data-in="pname" data-i="${i}" value="${esc(p.name)}" maxlength="16"></label>`).join("")}</div>
-    <div class="row"><span class="grow"></span><button class="btn primary" data-act="step" data-s="2">Next: pick teams</button></div>`;
-  } else if (st===2){
+    <div class="row"><button class="btn" data-act="step" data-s="1">Back</button><span class="grow"></span><button class="btn primary" data-act="step" data-s="3">Next: pick teams</button></div>`;
+  } else if (st===3){
     const conf = (label, list, off) => `<div class="panel" style="background:rgba(0,0,0,.2)">
       <h2>${label} CONFERENCE</h2>
-      ${[0,1,2,3,4,5,6,7].map(i=>{ const e=state.entries[off+i]; return `<div class="slot"><span class="seed">#${i+1}</span>
+      ${Array.from({length:CONF()},(_,i)=>i).map(i=>{ const e=state.entries[off+i]; return `<div class="slot"><span class="seed">#${i+1}</span>
         <div class="row" style="gap:6px;flex-wrap:nowrap">${badge(e.team)}<select id="team${off+i}" data-in="team" data-i="${off+i}" class="grow" aria-label="${label} seed ${i+1}">
         <option value="">Pick a team</option>${list.map(t=>`<option value="${t}"${e.team===t?" selected":""}>${TEAMS[t][0]} ${TEAMS[t][1]}</option>`).join("")}</select>
-        <button class="btn small mv" data-act="move" data-i="${off+i}" data-d="-1"${i===0?" disabled":""} aria-label="Move up">▲</button><button class="btn small mv" data-act="move" data-i="${off+i}" data-d="1"${i===7?" disabled":""} aria-label="Move down">▼</button></div></div>`; }).join("")}
-      <div class="row"><button class="btn small" data-act="randconf" data-c="${off}">Random 8</button><button class="btn small" data-act="randconf" data-c="${off}" data-rep="1">Random, repeats OK</button></div>
+        <button class="btn small mv" data-act="move" data-i="${off+i}" data-d="-1"${i===0?" disabled":""} aria-label="Move up">▲</button><button class="btn small mv" data-act="move" data-i="${off+i}" data-d="1"${i===CONF()-1?" disabled":""} aria-label="Move down">▼</button></div></div>`; }).join("")}
+      <div class="row"><button class="btn small" data-act="randconf" data-c="${off}">Random ${CONF()}</button><button class="btn small" data-act="randconf" data-c="${off}" data-rep="1">Random, repeats OK</button></div>
     </div>`;
     const missing = state.entries.filter(e=>!e.team).length;
-    body = `<h2>PICK AND RANK 16 TEAMS</h2>
-    <p class="muted">Rank each conference 1 to 8 with the arrows. Round 1 is 1 vs 8, 2 vs 7, 3 vs 6 and 4 vs 5, so the top seeds can't meet until later. The same NHL team can be entered twice, but its skaters are shared: once one is used he's gone for both.</p>
+    const pairText = {8:"Round 1 is 1 vs 8, 2 vs 7, 3 vs 6 and 4 vs 5, so the top seeds can't meet until later.", 4:"Round 1 is 1 vs 4 and 2 vs 3.", 2:"The two teams play for the conference title."}[CONF()];
+    body = `<h2>PICK AND RANK ${SIZE()} TEAMS</h2>
+    <p class="muted">Rank each conference 1 to ${CONF()} with the arrows. ${pairText} The same NHL team can be entered twice, but its skaters are shared: once one is used he's gone for both.</p>
     ${state.picks.length?`<p class="warn">Changing teams or seeds restarts the draft.</p>`:""}
-    <div class="row"><button class="btn small" data-act="randall">Random all 16</button><button class="btn small" data-act="clearteams">Clear</button></div>
-    <div class="confs">${conf("WEST", WEST, 0)}${conf("EAST", EAST, 8)}</div>
-    <div class="row"><button class="btn" data-act="step" data-s="1">Back</button><span class="grow"></span>
+    <div class="row"><button class="btn small" data-act="randall">Random all ${SIZE()}</button><button class="btn small" data-act="clearteams">Clear</button></div>
+    <div class="confs">${conf("WEST", WEST, 0)}${conf("EAST", EAST, CONF())}</div>
+    <div class="row"><button class="btn" data-act="step" data-s="2">Back</button><span class="grow"></span>
       ${missing?`<span class="warn">${missing} slot${missing>1?"s":""} still empty</span>`:""}
-      <button class="btn primary" data-act="step" data-s="3"${missing?" disabled":""}>Next: draft order</button></div>`;
-  } else if (st===3){
+      <button class="btn primary" data-act="step" data-s="4"${missing?" disabled":""}>Next: draft order</button></div>`;
+  } else if (st===4){
     fixOrder();
     const n = state.players.length;
-    const seq = Array.from({length:Math.min(2*n,16)},(_,p)=>state.players[onClock(p)].name);
+    const seq = Array.from({length:Math.min(2*n,SIZE())},(_,p)=>state.players[onClock(p)].name);
     body = `<h2>DRAFT ORDER</h2>
     <p class="muted">Set who picks first. Randomize it or use the arrows.</p>
     <div class="row"><button class="btn small" data-act="randorder">Randomize order</button></div>
@@ -444,26 +484,26 @@ function vSetup(){
       <button class="btn small${state.snake?" on":""}" data-act="snake" data-v="1">Snake</button>
       <button class="btn small${!state.snake?" on":""}" data-act="snake" data-v="0">Same order every round</button></div>
     <p class="muted">${state.snake?"Snake: the order flips each round, so whoever picks last in a round picks first in the next.":"Every round goes in the same order."} Picks go: ${esc(seq.join(", "))}…</p>
-    ${16%n?`<p class="muted">16 teams don't split evenly between ${n}, so the first ${16%n} in the order get one extra team.</p>`:""}
-    <div class="row"><button class="btn" data-act="step" data-s="2">Back</button><span class="grow"></span>
-      <button class="btn primary" data-act="step" data-s="4">Start the draft</button></div>`;
+    ${SIZE()%n?`<p class="muted">${SIZE()} teams don't split evenly between ${n}, so the first ${SIZE()%n} in the order get one extra team.</p>`:""}
+    <div class="row"><button class="btn" data-act="step" data-s="3">Back</button><span class="grow"></span>
+      <button class="btn primary" data-act="step" data-s="5">Start the draft</button></div>`;
   } else {
     fixOrder();
-    const done = state.picks.length>=16;
+    const done = state.picks.length>=SIZE();
     const cur = done ? null : onClock(state.picks.length);
     const counts = state.players.map((_,i)=>state.entries.filter(e=>e.owner===i).length);
     const pool = (label, off) => `<div class="panel" style="background:rgba(0,0,0,.2)"><h2>${label}</h2>
-      ${[0,1,2,3,4,5,6,7].map(i=>{ const ei=off+i, e=state.entries[ei], taken=e.owner!=null;
+      ${Array.from({length:CONF()},(_,i)=>i).map(i=>{ const ei=off+i, e=state.entries[ei], taken=e.owner!=null;
         return `<button class="dpick${taken?" taken":""}" data-act="draft" data-i="${ei}"${taken||done?" disabled":""}>
           <span class="seed">#${i+1}</span>${badge(e.team)}<span class="grow">${esc(TEAMS[e.team][0]+" "+TEAMS[e.team][1])}</span>
-          ${taken?`<span style="color:${PCOLORS[e.owner]}">${esc(state.players[e.owner].name)}</span>`:`<span class="muted">vs #${8-i}</span>`}</button>`; }).join("")}</div>`;
+          ${taken?`<span style="color:${PCOLORS[e.owner]}">${esc(state.players[e.owner].name)}</span>`:`<span class="muted">${CONF()>2?"vs #"+(CONF()-i):""}</span>`}</button>`; }).join("")}</div>`;
     body = `<h2>THE DRAFT</h2>
-    ${done?`<div class="banner"><span class="pix">DRAFT COMPLETE</span><span>All 16 teams have an owner.</span></div>`
-          :`<div class="clock"><span class="pix">ON THE CLOCK</span><span class="who" style="color:${PCOLORS[cur]}">${esc(state.players[cur].name)}</span><span class="muted">Pick ${state.picks.length+1} of 16</span></div>`}
+    ${done?`<div class="banner"><span class="pix">DRAFT COMPLETE</span><span>All ${SIZE()} teams have an owner.</span></div>`
+          :`<div class="clock"><span class="pix">ON THE CLOCK</span><span class="who" style="color:${PCOLORS[cur]}">${esc(state.players[cur].name)}</span><span class="muted">Pick ${state.picks.length+1} of ${SIZE()}</span></div>`}
     <div class="counts">${state.players.map((p,i)=>`<span><i class="chip" style="background:${PCOLORS[i]}"></i>${esc(p.name)}: ${counts[i]}</span>`).join("")}</div>
-    <div class="confs">${pool("WEST",0)}${pool("EAST",8)}</div>
-    ${state.picks.length?`<div class="ideas"><h3>DRAFT BOARD</h3><ol class="board">${state.picks.map((ei,p)=>`<li><span style="color:${PCOLORS[state.entries[ei].owner]}">${esc(state.players[state.entries[ei].owner].name)}</span> took ${badge(state.entries[ei].team)} ${ei<8?"West":"East"} #${ei%8+1}</li>`).join("")}</ol></div>`:""}
-    <div class="row"><button class="btn" data-act="step" data-s="3">Back</button>
+    <div class="confs">${pool("WEST",0)}${pool("EAST",CONF())}</div>
+    ${state.picks.length?`<div class="ideas"><h3>DRAFT BOARD</h3><ol class="board">${state.picks.map((ei,p)=>`<li><span style="color:${PCOLORS[state.entries[ei].owner]}">${esc(state.players[state.entries[ei].owner].name)}</span> took ${badge(state.entries[ei].team)} ${ei<CONF()?"West":"East"} #${ei%CONF()+1}</li>`).join("")}</ol></div>`:""}
+    <div class="row"><button class="btn" data-act="step" data-s="4">Back</button>
       ${state.picks.length&&!done?`<button class="btn small" data-act="undopick">Undo last pick</button>`:""}
       ${!done?`<button class="btn small" data-act="autodraft">Auto-pick the rest</button>`:`<button class="btn small" data-act="undopick">Undo last pick</button>`}
       <span class="grow"></span>
@@ -485,7 +525,7 @@ function matchCard(g){
     const e = ents[s]; const ent = e!=null ? state.entries[e] : null;
     const who = ent ? state.players[ctrl[s]] : null;
     const pick = gm && gm.sides[s].skater ? " · "+esc(pName(gm.sides[s].skater).split(" ").slice(-1)[0]) : "";
-    return `<div class="mrow${final?(win===s?" win":" lose"):""}"><span class="sd">${e!=null&&state.v>=2?e%8+1:""}</span>${badge(ent&&ent.team)}
+    return `<div class="mrow${final?(win===s?" win":" lose"):""}"><span class="sd">${e!=null&&state.v>=2?e%CONF()+1:""}</span>${badge(ent&&ent.team)}
       <span class="who" style="color:${who?PCOLORS[ctrl[s]]:"var(--dim)"}">${who?esc(who.name)+pick:"Winner of "+(g<8?"":"G"+(feeders(g)[s]+1))}</span>
       <span class="sc">${final?gm.sides[s].score:""}</span></div>`;
   }).join("");
@@ -494,20 +534,25 @@ function matchCard(g){
 }
 function vBracket(){
   const col = (title, ids) => `<div class="bcol"><h3>${title}</h3>${ids.map(matchCard).join("")}</div>`;
-  const champE = winnerEntry(14);
+  const F = FINAL();
+  const champE = winnerEntry(F);
   const champ = champE!=null ? state.entries[champE] : null;
-  const champOwner = champ ? state.players[controller(14, state.games[14].sides[0].score>state.games[14].sides[1].score?0:1)] : null;
-  const cupCol = `<div class="bcol"><h3>STANLEY CUP FINAL</h3>${matchCard(14)}
+  const champOwner = champ ? state.players[controller(F, state.games[F].sides[0].score>state.games[F].sides[1].score?0:1)] : null;
+  const cupCol = `<div class="bcol"><h3>STANLEY CUP FINAL</h3>${matchCard(F)}
     <div class="cup"><div class="trophy" aria-hidden="true"></div>
     ${champ?`<p class="champ">${esc(TEAMS[champ.team][0]+" "+TEAMS[champ.team][1]).toUpperCase()}<br>WIN THE CUP!</p><p>${esc(champOwner.name)} takes it.</p>
       <button class="btn small" data-act="go" data-v="conn">${state.conn?"Conn Smythe: "+esc(pName(state.conn)):"Pick the Conn Smythe"}</button>`:`<p class="muted">Champion crowned here</p>`}
     </div></div>`;
+  const R = ROUNDS();
+  const half = (r, west) => { const s=rstart(r), h=rcount(r)/2; return Array.from({length:h},(_,i)=>s+(west?i:h+i)); };
+  const label = (r, west) => (west?"WEST":"EAST")+" · "+["ROUND 1","SEMIS","FINAL"][r+4-R];
+  const west = [], east = [];
+  for (let r=0; r<R-1; r++){ west.push(col(label(r,true), half(r,true))); east.unshift(col(label(r,false), half(r,false))); }
+  const ncols = 2*(R-1)+1;
   return `<section class="panel">
-    <div class="row"><h2>PLAYOFF BRACKET</h2><span class="grow"></span><span class="muted">Tap a game to set lineups and enter the score.</span></div>
-    <div class="bwrap"><div class="bracket">
-      ${col("WEST · ROUND 1",[0,1,2,3])}${col("WEST · SEMIS",[8,9])}${col("WEST FINAL",[12])}
-      ${cupCol}
-      ${col("EAST FINAL",[13])}${col("EAST · SEMIS",[10,11])}${col("EAST · ROUND 1",[4,5,6,7])}
+    <div class="row"><h2>PLAYOFF BRACKET · ${SIZE()} TEAMS</h2><span class="grow"></span><span class="muted">Tap a game to set lineups and enter the score.</span></div>
+    <div class="bwrap"><div class="bracket" style="grid-template-columns:repeat(${ncols},minmax(172px,1fr));min-width:${ncols*180}px">
+      ${west.join("")}${cupCol}${east.join("")}
     </div></div>
   </section>`;
 }
@@ -571,7 +616,7 @@ function vGame(){
   const issues = draftIssues(g);
   const conf = confOf(g);
   return `<section class="panel">
-    <div class="row"><h2>${conf==="F"?"STANLEY CUP FINAL":(conf==="W"?"WEST":"EAST")+" · "+ROUND_NAMES[roundOf(g)].toUpperCase()+" · GAME "+gameNo(g)}</h2><span class="grow"></span>
+    <div class="row"><h2>${conf==="F"?"STANLEY CUP FINAL":(conf==="W"?"WEST":"EAST")+" · "+roundName(roundOf(g)).toUpperCase()+" · GAME "+gameNo(g)}</h2><span class="grow"></span>
       <button class="btn small" data-act="go" data-v="bracket">Back to bracket</button></div>
     ${isLocked?`<p class="warn">The next round has started, so this game is locked.</p>`:""}
     <div class="vs">${side(0)}<div class="vsmid">VS</div>${side(1)}</div>
@@ -589,7 +634,7 @@ function vGame(){
 /* stats */
 function finals(){
   const out = [];
-  for (let g=0; g<15; g++){
+  for (let g=0; g<NGAMES(); g++){
     const gm = state.games[g];
     if (!gm || gm.status!=="final") continue;
     [0,1].forEach(s=>{
@@ -632,17 +677,17 @@ function vStats(){
     body = table(["Team","Owner","GP","W","L","GF","GA","Status"],
       rows.map(r=>[badge(r.en.team)+" "+esc(teamName(r.en.team)),esc(state.players[r.en.owner].name),r.gp,r.w,r.gp-r.w,r.gf,r.ga,r.alive?"Alive":"Out"]));
   } else {
-    const games = []; for (let g=0; g<15; g++){ const gm=state.games[g]; if (gm&&gm.status==="final") games.push(g); }
+    const games = []; for (let g=0; g<NGAMES(); g++){ const gm=state.games[g]; if (gm&&gm.status==="final") games.push(g); }
     body = table(["Game","Round","Winner","Score","Loser","Skaters","Goalies"],
       games.map(g=>{ const gm=state.games[g]; const w=gm.sides[0].score>gm.sides[1].score?0:1, l=1-w;
         const tw=state.entries[entryOf(g,w)].team, tl=state.entries[entryOf(g,l)].team;
-        return ["G"+(g+1),ROUND_NAMES[roundOf(g)],badge(tw)+" "+esc(state.players[gm.sides[w].owner].name),
+        return ["G"+(g+1),roundName(roundOf(g)),badge(tw)+" "+esc(state.players[gm.sides[w].owner].name),
           `${gm.sides[w].score}–${gm.sides[l].score}${gm.ot?" OT":""}`,badge(tl)+" "+esc(state.players[gm.sides[l].owner].name),
           esc(pName(gm.sides[w].skater))+" / "+esc(pName(gm.sides[l].skater)), esc(pName(gm.sides[w].goalie))+" / "+esc(pName(gm.sides[l].goalie))]; }));
   }
   let rec = "";
   if (F.length){
-    const gs=[]; for (let g=0; g<15; g++){ const gm=state.games[g]; if (gm&&gm.status==="final") gs.push({g,m:Math.abs(gm.sides[0].score-gm.sides[1].score),t:gm.sides[0].score+gm.sides[1].score}); }
+    const gs=[]; for (let g=0; g<NGAMES(); g++){ const gm=state.games[g]; if (gm&&gm.status==="final") gs.push({g,m:Math.abs(gm.sides[0].score-gm.sides[1].score),t:gm.sides[0].score+gm.sides[1].score}); }
     const big = gs.slice().sort((a,b)=>b.m-a.m)[0], hi = gs.slice().sort((a,b)=>b.t-a.t)[0];
     rec = `<div class="ideas"><h3>TOURNAMENT RECORDS</h3>
       <span>Biggest win: game ${big.g+1}, by ${big.m}</span><span>Highest scoring: game ${hi.g+1}, ${hi.t} goals</span>
@@ -658,7 +703,7 @@ function table(head, rows){
   return `<table><thead><tr>${head.map((h,i)=>`<th${i>1?' class="num"':""}>${h}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td${i>1?' class="num"':""}>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
 }
 function isAlive(ei){
-  for (let g=0; g<15; g++){
+  for (let g=0; g<NGAMES(); g++){
     const gm = state.games[g];
     if (gm && gm.status==="final"){ const w = winnerEntry(g); if ((entryOf(g,0)===ei || entryOf(g,1)===ei) && w!==ei) return false; }
   }
@@ -667,7 +712,7 @@ function isAlive(ei){
 
 /* Conn Smythe */
 function vConn(){
-  const ce = winnerEntry(14);
+  const ce = winnerEntry(FINAL());
   if (ce==null) return `<section class="panel"><p class="empty">Finish the Stanley Cup Final first.</p></section>`;
   const F = finals().filter(x=>x.e===ce);
   const sk = F.filter(x=>x.skater).map(x=>({id:x.skater, line:`${x.gf} team goals in G${x.g+1} (${x.win?"W":"L"} ${x.gf}–${x.ga})`, rank:x.gf}));
@@ -697,23 +742,23 @@ function fixOrder(){
 }
 function dealOwners(){
   const n = state.players.length;
-  const base = Array.from({length:16},(_,i)=>i%n);
+  const base = Array.from({length:SIZE()},(_,i)=>i%n);
   for (let t=0; t<800; t++){
     const o = shuffle(base);
-    let ok = true; for (let k=0;k<8;k++) if (o[entryOf(k,0)]===o[entryOf(k,1)]) { ok=false; break; }
+    let ok = true; for (let k=0;k<rcount(0);k++) if (o[entryOf(k,0)]===o[entryOf(k,1)]) { ok=false; break; }
     if (ok || t===799){ o.forEach((v,i)=>state.entries[i].owner=v); return; }
   }
 }
 function randomConf(off, rep){
   const list = off===0?WEST:EAST;
-  const pick = rep ? Array.from({length:8},()=>list[Math.floor(Math.random()*list.length)]) : shuffle(list).slice(0,8);
+  const pick = rep ? Array.from({length:CONF()},()=>list[Math.floor(Math.random()*list.length)]) : shuffle(list).slice(0,CONF());
   pick.forEach((t,i)=>state.entries[off+i].team=t);
 }
 function loadSample(){
   state = blank(); state.sample = true; state.name = "Sample Cup"; state.stage = "bracket";
   state.players = [{name:"Alex"},{name:"Jordan"},{name:"Sam"}];
-  randomConf(0); randomConf(8); state.draftOrder = shuffle([0,1,2]);
-  while (state.picks.length<16){ const left=state.entries.map((e,i)=>i).filter(i=>state.entries[i].owner==null); const ei=left[Math.floor(Math.random()*Math.min(3,left.length))]; state.entries[ei].owner=onClock(state.picks.length); state.picks.push(ei); }
+  randomConf(0); randomConf(CONF()); state.draftOrder = shuffle([0,1,2]);
+  while (state.picks.length<SIZE()){ const left=state.entries.map((e,i)=>i).filter(i=>state.entries[i].owner==null); const ei=left[Math.floor(Math.random()*Math.min(3,left.length))]; state.entries[ei].owner=onClock(state.picks.length); state.picks.push(ei); }
   for (const g of [0,1,4,5,2]){
     const sides = [0,1].map(s=>{ const ros = roster(state.entries[entryOf(g,s)].team); const used = usedSkaters(-1);
       const sk = shuffle(ros.filter(p=>!p.g && !used[p.id]))[0]; const gl = shuffle(ros.filter(p=>p.g))[0];
@@ -745,15 +790,16 @@ document.addEventListener("click", ev => {
   }
   else if (a==="step"){ state.step = +b.dataset.s; persist(); window.scrollTo(0,0); }
   else if (a==="randconf"){ randomConf(+b.dataset.c, !!b.dataset.rep); resetDraft(); persist(); }
-  else if (a==="randall"){ randomConf(0); randomConf(8); resetDraft(); persist(); }
+  else if (a==="randall"){ randomConf(0); randomConf(CONF()); resetDraft(); persist(); }
+  else if (a==="size"){ const n=+b.dataset.n; if (n!==SIZE()){ state.size=n; state.entries=Array.from({length:n},()=>({team:null,owner:null})); state.games={}; state.conn=null; resetDraft(); persist(); } }
   else if (a==="clearteams"){ state.entries.forEach(e=>e.team=null); resetDraft(); persist(); }
   else if (a==="move"){ const i=+b.dataset.i, j=i+(+b.dataset.d); const E=state.entries; [E[i],E[j]]=[E[j],E[i]]; resetDraft(); persist(); }
   else if (a==="randorder"){ fixOrder(); state.draftOrder = shuffle(state.draftOrder); resetDraft(); persist(); }
   else if (a==="ordmove"){ const k=+b.dataset.k, j=k+(+b.dataset.d); const O=state.draftOrder; [O[k],O[j]]=[O[j],O[k]]; resetDraft(); persist(); }
   else if (a==="snake"){ state.snake = b.dataset.v==="1"; resetDraft(); persist(); }
-  else if (a==="draft"){ const ei=+b.dataset.i; if (state.entries[ei].owner==null && state.picks.length<16){ state.entries[ei].owner = onClock(state.picks.length); state.picks.push(ei); persist(); } }
+  else if (a==="draft"){ const ei=+b.dataset.i; if (state.entries[ei].owner==null && state.picks.length<SIZE()){ state.entries[ei].owner = onClock(state.picks.length); state.picks.push(ei); persist(); } }
   else if (a==="undopick"){ const ei=state.picks.pop(); if (ei!=null) state.entries[ei].owner=null; persist(); }
-  else if (a==="autodraft"){ while (state.picks.length<16){ const left=state.entries.map((e,i)=>i).filter(i=>state.entries[i].owner==null); const ei=shuffle(left)[0]; state.entries[ei].owner=onClock(state.picks.length); state.picks.push(ei); } persist(); }
+  else if (a==="autodraft"){ while (state.picks.length<SIZE()){ const left=state.entries.map((e,i)=>i).filter(i=>state.entries[i].owner==null); const ei=shuffle(left)[0]; state.entries[ei].owner=onClock(state.picks.length); state.picks.push(ei); } persist(); }
   else if (a==="start"){ state.stage="bracket"; ui.view="bracket"; persist(); window.scrollTo(0,0); }
   else if (a==="open"){ openGame(+b.dataset.g); return; }
   else if (a==="pick"){ const s=+b.dataset.s, k=b.dataset.k; ui.draft.sides[s][k] = ui.draft.sides[s][k]===b.dataset.id ? null : b.dataset.id; keepScroll(); return; }
@@ -767,7 +813,7 @@ document.addEventListener("click", ev => {
     if (d.status==="final" && draftIssues(ui.gid).length) d.status="lineup";
     state.games[ui.gid]=JSON.parse(JSON.stringify(d)); persist(); ui.view="bracket"; }
   else if (a==="final"){ ui.draft.status="final"; state.games[ui.gid]=JSON.parse(JSON.stringify(ui.draft)); persist();
-    ui.view = ui.gid===14 ? "conn" : "bracket"; }
+    ui.view = ui.gid===FINAL() ? "conn" : "bracket"; }
   else if (a==="cleargame"){ delete state.games[ui.gid]; persist(); ui.view="bracket"; }
   else if (a==="tab"){ ui.tab=b.dataset.t; }
   else if (a==="conn"){ state.conn = b.dataset.id; persist(); }
@@ -793,7 +839,7 @@ document.addEventListener("input", ev => {
 /* boot */
 state = loadLocal();
 if (!state){ state = blank(); }
-if (!state.picks){ state.picks = []; state.snake = true; state.draftOrder = []; }
+migrate(state);
 render();
 connectDb();
 </script>
