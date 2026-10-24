@@ -244,6 +244,40 @@ tr:nth-child(even) td{background:rgba(0,0,0,.18)}
 .match.ro:hover{border-color:var(--hi);box-shadow:none}
 .shareurl{width:100%;font-size:17px}
 
+/* game clock: an arena scoreboard on top of the faceoff screen */
+.sb{background:#000;border:4px solid;border-color:#3a3a3a #111 #111 #3a3a3a;box-shadow:0 0 0 2px #000,0 6px 0 rgba(0,0,0,.4);padding:12px;display:flex;flex-direction:column;gap:12px}
+.sbtop{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center}
+.sbteam{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;text-align:center}
+.sbteam .pl{font-family:var(--pix);font-size:9px;color:var(--ice);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sbteam .gl{font-family:var(--pix);font-size:clamp(34px,7vw,56px);color:var(--red);text-shadow:0 0 10px rgba(236,58,58,.6);background:#140303;border:2px solid #2a0a0a;min-width:2.2ch;padding:6px 8px 4px;line-height:1}
+.sbmid{display:flex;flex-direction:column;align-items:center;gap:6px}
+.sbper{font-family:var(--pix);font-size:11px;color:var(--frost)}
+.sbclock{font-family:var(--pix);font-size:clamp(30px,7.5vw,60px);color:var(--gold);text-shadow:0 0 12px rgba(248,216,56,.55);background:#171200;border:2px solid #2e2600;padding:8px 10px 6px;line-height:1;font-variant-numeric:tabular-nums}
+.sbclock.low{color:var(--fire);text-shadow:0 0 12px rgba(255,122,26,.7)}
+.sbstate{font-family:var(--pix);font-size:8px;color:var(--dim);min-height:10px}
+.sbstate.go{color:var(--ok)}
+.sbbox{width:auto;margin:0 auto;font-size:18px;background:transparent}
+.sbbox th,.sbbox td{text-align:center;padding:4px 10px;border-bottom:1px solid #222;background:transparent!important}
+.sbbox th{color:var(--dim);border-bottom:2px solid #333}
+.sbbox th:first-child,.sbbox td:first-child{text-align:left}
+.sbbox td.cur{color:var(--gold)}
+.sbbox td.t{font-family:var(--pix);font-size:11px;color:var(--gold)}
+.sbctl{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center}
+.sbctl .muted{font-size:18px;text-align:center}
+.lens{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.lens .btn.sel{background:var(--gold);color:var(--navy)}
+.sbenter{display:flex;flex-direction:column;gap:10px;align-items:center;border-top:2px solid #222;padding-top:10px}
+.sbenter h3{color:var(--gold);text-align:center}
+.sbenter .rows{display:flex;gap:24px;flex-wrap:wrap;justify-content:center}
+.sbenter .rows > div{display:flex;flex-direction:column;align-items:center;gap:6px}
+.pertabs{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.pertabs .btn{padding:6px 10px;font-size:9px}
+.pertabs .btn.sel{background:var(--gold);color:var(--navy)}
+@media (max-width:520px){
+  .sbtop{grid-template-columns:1fr 1fr}
+  .sbmid{grid-column:1 / -1;order:-1}
+}
+
 @media (max-width:760px){
   .vs{grid-template-columns:1fr}
   .vsmid{justify-self:center}
@@ -486,7 +520,8 @@ const HELP = [
   ["GAME NIGHT", `<ul><li>Tap a game in the bracket. Each side picks <b>one skater and one goalie</b> from their NHL roster.</li>
     <li>A skater can only be used <b>once per tournament</b>. Goalies can play again.</li>
     <li>If one person owns both teams in a game, change <b>Controlled by</b> to hand one side to someone else.</li>
-    <li>Enter the final score. <b>No ties</b>: tick overtime if it went extra.</li></ul>`],
+    <li>Pick <b>5, 10, 15 or 20 minute periods</b> and tap <b>Drop the puck</b>. The scoreboard runs the clock; at the horn, punch in that period's goals.</li>
+    <li>Tied after 3 periods? <b>Sudden-death OT</b>: the first goal wins. Or skip the clock and just enter the final score.</li></ul>`],
   ["STATS AND THE CUP", `<ul><li>The winner moves on automatically. Check <b>Stats</b> for standings, goalies and the game log.</li>
     <li>After the Cup Final, pick the <b>Conn Smythe</b> playoff MVP from the champion's players.</li>
     <li>Reopen this guide any time from <b>How to play</b> on the main menu.</li></ul>`]
@@ -750,7 +785,7 @@ function vBracket(){
 /* faceoff / game */
 function openGame(g){
   const gm = state.games[g];
-  ui.gid = g;
+  ui.gid = g; ui.editPer = null; ui.sbReset = false;
   ui.draft = gm ? JSON.parse(JSON.stringify(gm)) : { status:"lineup", ot:false,
     sides:[0,1].map(s=>({ owner: controller(g,s), skater:null, goalie:null, score:0 })) };
   ui.view = "game";
@@ -762,8 +797,120 @@ function draftIssues(g){
   d.sides.forEach((s,i)=>{ const t = teamName(state.entries[entryOf(g,i)].team);
     if (!s.skater) out.push(`${t}: pick a skater.`);
     if (!s.goalie) out.push(`${t}: pick a goalie.`); });
-  if (d.sides[0].score===d.sides[1].score) out.push("No ties in the playoffs. Someone has to win.");
+  if (d.clock && d.clock.phase!=="done") out.push("The game clock is still going. Finish the periods first.");
+  else if (d.sides[0].score===d.sides[1].score) out.push("No ties in the playoffs. Someone has to win.");
   return out;
+}
+/* game clock: pick a period length, run the clock like an arena scoreboard, punch in each
+   period's goals at the horn. Tied after 3 periods means sudden-death OT: next goal wins.
+   d.clock.phase: "play" (a regulation period is on), "break" (period over, enter its goals),
+   "ot" (sudden death, clock counts up), "done" (game over). d.periods holds [side0, side1] goals per period. */
+const PERIODS = 3, LENGTHS = [5,10,15,20];
+const perName = p => p>=PERIODS ? "OT" : ["1ST","2ND","3RD"][p];
+const regGoals = (d, s) => d.periods.reduce((t,pg)=>t+pg[s], 0);
+function syncScore(d){
+  d.sides.forEach((sd,s)=>{ sd.score = regGoals(d,s) + (d.otWin===s ? 1 : 0); });
+  d.ot = d.otWin!=null;
+}
+function clockMs(c){
+  if (c.phase==="ot") return (c.base||0) + (c.at ? Date.now()-c.at : 0);
+  return Math.max(0, (c.left||0) - (c.at ? Date.now()-c.at : 0));
+}
+function fmtClock(ms, up){
+  const t = up ? Math.floor(ms/1000) : Math.ceil(ms/1000);
+  return String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0");
+}
+let audio = null, wakeLock = null;
+function horn(){
+  try {
+    audio = audio || new (window.AudioContext||window.webkitAudioContext)();
+    const t = audio.currentTime, g = audio.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t+0.05);
+    g.gain.setValueAtTime(0.25, t+1.2); g.gain.exponentialRampToValueAtTime(0.0001, t+1.5);
+    g.connect(audio.destination);
+    [110, 138.6, 165].forEach(f=>{ const o = audio.createOscillator(); o.type="sawtooth"; o.frequency.value=f; o.connect(g); o.start(t); o.stop(t+1.55); });
+  } catch(e) {}
+  if (navigator.vibrate) try { navigator.vibrate([400,150,400]); } catch(e) {}
+}
+function keepAwake(on){
+  try {
+    if (on && !wakeLock && navigator.wakeLock) navigator.wakeLock.request("screen").then(l=>{ wakeLock=l; l.addEventListener("release",()=>{ wakeLock=null; }); }).catch(()=>{});
+    else if (!on && wakeLock){ wakeLock.release(); wakeLock=null; }
+  } catch(e) {}
+}
+function autosave(){
+  const g = ui.gid, cur = state.games[g];
+  if (cur && cur.status==="final") return;
+  state.games[g] = JSON.parse(JSON.stringify({ ...ui.draft, status:"lineup" })); persist();
+}
+function pauseClock(c){ if (!c.at) return; if (c.phase==="ot") c.base = clockMs(c); else c.left = clockMs(c); c.at = null; }
+function endPeriod(d, buzz){
+  const c = d.clock; c.left = 0; c.at = null; c.phase = "break"; ui.editPer = c.per;
+  if (buzz) horn(); keepAwake(false); autosave();
+}
+/* after any goal change: an OT winner only counts while regulation is tied */
+function settle(d){
+  const c = d.clock, tied = regGoals(d,0)===regGoals(d,1);
+  if (!tied && d.otWin!=null){ d.otWin = null; c.phase = "done"; }
+  if (c.phase==="done" && tied && d.otWin==null){ c.phase = "break"; c.per = PERIODS-1; }
+  syncScore(d);
+}
+setInterval(()=>{
+  if (ui.view!=="game" || !ui.draft || !ui.draft.clock) return;
+  const c = ui.draft.clock; if (!c.at) return;
+  const ms = clockMs(c);
+  if (c.phase==="play" && ms<=0){ endPeriod(ui.draft, true); keepScroll(); return; }
+  const el = $(".sbclock"); if (el){ el.textContent = fmtClock(ms, c.phase==="ot"); el.classList.toggle("low", c.phase==="play" && ms<60000); }
+}, 250);
+document.addEventListener("visibilitychange", ()=>{ if (document.visibilityState==="visible" && ui.draft && ui.draft.clock && ui.draft.clock.at) keepAwake(true); });
+
+function vScoreboard(g){
+  const d = ui.draft, c = d.clock, isLocked = locked(g);
+  const ent = s => state.entries[entryOf(g,s)];
+  const team = s => `<div class="sbteam">${badge(ent(s).team)}<span class="pl">${esc(state.players[d.sides[s].owner].name)}</span><span class="gl">${d.sides[s].score}</span></div>`;
+  const abbr = s => ent(s).team || "TBD";
+  let mid, ctl = "", enter = "", box = "";
+  if (!c){
+    const len = state.periodLen || 10;
+    mid = `<div class="sbmid"><span class="sbper">GAME CLOCK</span><span class="sbclock">${fmtClock(len*60000)}</span><span class="sbstate">${PERIODS} PERIODS</span></div>`;
+    ctl = isLocked ? "" : `<div class="sbctl" style="flex-direction:column"><span class="muted">Minutes per period</span>
+      <div class="lens">${LENGTHS.map(m=>`<button class="btn small${m===len?" sel":""}" data-act="plen" data-m="${m}">${m} MIN</button>`).join("")}</div>
+      <button class="btn primary" data-act="clockgo">Drop the puck</button>
+      <span class="muted">Not using the clock? Just punch in the final score below.</span></div>`;
+  } else {
+    const ms = clockMs(c), up = c.phase==="ot";
+    const label = c.phase==="done" ? (d.otWin!=null ? "FINAL / OT" : "FINAL") : c.phase==="break" ? "END OF "+perName(c.per) : up ? "SUDDEN DEATH OT" : perName(c.per)+" PERIOD";
+    const st = c.phase==="done" ? "" : c.at ? "RUNNING" : c.phase==="break" ? "INTERMISSION" : "PAUSED";
+    mid = `<div class="sbmid"><span class="sbper">${label}</span><span class="sbclock${!up&&c.phase==="play"&&ms<60000?" low":""}">${fmtClock(ms, up)}</span><span class="sbstate${c.at?" go":""}">${st}</span></div>`;
+    const played = c.phase==="play" ? c.per : Math.min(c.per, PERIODS-1);
+    const showOt = c.phase==="ot" || d.otWin!=null;
+    const cols = [...Array(PERIODS).keys()];
+    box = `<table class="sbbox"><thead><tr><th></th>${cols.map(p=>`<th>${p+1}</th>`).join("")}${showOt?"<th>OT</th>":""}<th>T</th></tr></thead><tbody>${[0,1].map(s=>
+      `<tr><td>${esc(abbr(s))}</td>${cols.map(p=>`<td class="${p===c.per&&c.phase!=="done"&&c.phase!=="ot"?"cur":""}">${p<=played?d.periods[p][s]:"–"}</td>`).join("")}${showOt?`<td>${d.otWin===s?1:0}</td>`:""}<td class="t">${d.sides[s].score}</td></tr>`).join("")}</tbody></table>`;
+    if (!isLocked){
+      const run = c.at ? `<button class="btn" data-act="clockpause">Pause</button>` : `<button class="btn primary" data-act="clockrun">${c.phase==="ot"&&!c.base?"Start OT":"Resume"}</button>`;
+      if (c.phase==="play") ctl = `<div class="sbctl">${run}<button class="btn small" data-act="clockend">End period now</button></div>`;
+      else if (c.phase==="ot") ctl = `<div class="sbctl">${run}${[0,1].map(s=>`<button class="btn" data-act="otgoal" data-s="${s}">${esc(abbr(s))} scored</button>`).join("")}</div>
+        <div class="sbctl"><span class="muted">Sudden death: the first goal wins it.</span></div>`;
+      if (c.phase==="break" || c.phase==="done"){
+        const ep = ui.editPer!=null && ui.editPer<=played ? ui.editPer : played;
+        const tabs = played>0 ? `<div class="pertabs">${cols.filter(p=>p<=played).map(p=>`<button class="btn${p===ep?" sel":""}" data-act="editper" data-p="${p}">${perName(p)}</button>`).join("")}</div>` : "";
+        const tied = regGoals(d,0)===regGoals(d,1);
+        let next = "";
+        if (c.phase==="break"){
+          if (c.per<PERIODS-1) next = `<button class="btn primary" data-act="nextper">Start ${perName(c.per+1)} period</button>`;
+          else next = tied ? `<button class="btn primary" data-act="startot">Tied! Go to sudden-death OT</button>` : `<button class="btn primary" data-act="gameover">That's the game</button>`;
+        }
+        enter = `<div class="sbenter"><h3>${c.phase==="done"?"FIX A PERIOD":"GOALS IN THE "+perName(ep)+" PERIOD"}</h3>${tabs}
+          <div class="rows">${[0,1].map(s=>`<div>${badge(ent(s).team)}<div class="score"><button class="btn small" data-act="pgoal" data-p="${ep}" data-s="${s}" data-d="-1" aria-label="One fewer goal">−</button>
+            <output>${d.periods[ep][s]}</output><button class="btn small" data-act="pgoal" data-p="${ep}" data-s="${s}" data-d="1" aria-label="One more goal">+</button></div></div>`).join("")}</div>
+          ${next}</div>`;
+      }
+      ctl += `<div class="sbctl">${ui.sbReset?`<span class="muted">Wipe the clock and period scores?</span><button class="btn small primary" data-act="clockreset" data-sure="1">Yes, reset</button><button class="btn small" data-act="clockkeep">Keep</button>`
+        :`<button class="btn small" data-act="clockreset">Reset clock</button>`}</div>`;
+    }
+  }
+  return `<div class="sb"><div class="sbtop">${team(0)}${mid}${team(1)}</div>${box}${enter}${ctl}</div>`;
 }
 function vGame(){
   const g = ui.gid, d = ui.draft;
@@ -798,9 +945,10 @@ function vGame(){
           <button class="btn small" data-act="addp" data-s="${s}" data-t="${e.team}">Add</button>
         </div></details>
       <h3>GOALS</h3>
-      <div class="score"><button class="btn small" data-act="score" data-s="${s}" data-d="-1"${isLocked?" disabled":""} aria-label="One fewer goal">−</button>
+      ${d.clock?`<div class="score"><output>${d.sides[s].score}</output><span class="muted">from the scoreboard</span></div>`
+      :`<div class="score"><button class="btn small" data-act="score" data-s="${s}" data-d="-1"${isLocked?" disabled":""} aria-label="One fewer goal">−</button>
         <output>${d.sides[s].score}</output>
-        <button class="btn small" data-act="score" data-s="${s}" data-d="1"${isLocked?" disabled":""} aria-label="One more goal">+</button></div>
+        <button class="btn small" data-act="score" data-s="${s}" data-d="1"${isLocked?" disabled":""} aria-label="One more goal">+</button></div>`}
     </div>`;
   };
   const issues = draftIssues(g);
@@ -809,9 +957,10 @@ function vGame(){
     <div class="row"><h2>${conf==="F"?"STANLEY CUP FINAL":(conf==="W"?"FIRE · WEST":"ICE · EAST")+" · "+roundName(roundOf(g)).toUpperCase()+" · GAME "+gameNo(g)}</h2><span class="grow"></span>
       <button class="btn small" data-act="go" data-v="bracket">Back to bracket</button></div>
     ${isLocked?`<p class="warn">The next round has started, so this game is locked.</p>`:""}
+    ${vScoreboard(g)}
     <div class="vs">${side(0)}<div class="vsmid">VS</div>${side(1)}</div>
     <div class="row">
-      <label class="row" style="flex-direction:row;gap:8px;align-items:center"><input type="checkbox" id="ot" data-in="ot"${d.ot?" checked":""}${isLocked?" disabled":""}> Won in overtime</label>
+      <label class="row" style="flex-direction:row;gap:8px;align-items:center"><input type="checkbox" id="ot" data-in="ot"${d.ot?" checked":""}${isLocked||d.clock?" disabled":""}> Won in overtime</label>
     </div>
     ${!isLocked && issues.length?`<div class="issues">${issues.map(i=>`<span class="warn">▸ ${esc(i)}</span>`).join("")}</div>`:""}
     ${!isLocked?`<div class="row"><button class="btn" data-act="savelineup">Save lineup only</button>
@@ -1067,6 +1216,26 @@ document.addEventListener("click", ev => {
   else if (a==="open"){ openGame(+b.dataset.g); return; }
   else if (a==="pick"){ const s=+b.dataset.s, k=b.dataset.k; ui.draft.sides[s][k] = ui.draft.sides[s][k]===b.dataset.id ? null : b.dataset.id; keepScroll(); return; }
   else if (a==="score"){ const s=+b.dataset.s; ui.draft.sides[s].score = Math.max(0, Math.min(99, ui.draft.sides[s].score + (+b.dataset.d))); keepScroll(); return; }
+  else if (a==="plen"){ state.periodLen = +b.dataset.m; persist(); keepScroll(); return; }
+  else if (a==="clockgo"){ const len = state.periodLen || 10, d = ui.draft;
+    d.periods = Array.from({length:PERIODS}, ()=>[0,0]); d.otWin = null;
+    d.clock = { len, per:0, phase:"play", left:len*60000, at:Date.now() }; syncScore(d);
+    try { audio = audio || new (window.AudioContext||window.webkitAudioContext)(); audio.resume(); } catch(e) {}
+    keepAwake(true); autosave(); keepScroll(); return; }
+  else if (a==="clockpause"){ pauseClock(ui.draft.clock); keepAwake(false); autosave(); keepScroll(); return; }
+  else if (a==="clockrun"){ const c = ui.draft.clock; c.at = Date.now(); try { audio && audio.resume(); } catch(e) {} keepAwake(true); keepScroll(); return; }
+  else if (a==="clockend"){ endPeriod(ui.draft, false); keepScroll(); return; }
+  else if (a==="nextper"){ const c = ui.draft.clock; c.per++; c.phase="play"; c.left=c.len*60000; c.at=Date.now(); ui.editPer=null; keepAwake(true); autosave(); keepScroll(); return; }
+  else if (a==="startot"){ const c = ui.draft.clock; c.per=PERIODS; c.phase="ot"; c.base=0; c.at=null; ui.editPer=null; autosave(); keepScroll(); return; }
+  else if (a==="otgoal"){ const d = ui.draft; pauseClock(d.clock); d.otWin = +b.dataset.s; d.clock.phase="done"; syncScore(d); horn(); keepAwake(false); autosave(); keepScroll(); return; }
+  else if (a==="gameover"){ ui.draft.clock.phase="done"; ui.editPer=null; autosave(); keepScroll(); return; }
+  else if (a==="editper"){ ui.editPer = +b.dataset.p; keepScroll(); return; }
+  else if (a==="pgoal"){ const d = ui.draft, pg = d.periods[+b.dataset.p], s = +b.dataset.s;
+    pg[s] = Math.max(0, Math.min(99, pg[s] + (+b.dataset.d))); settle(d); autosave(); keepScroll(); return; }
+  else if (a==="clockreset"){ if (!b.dataset.sure){ ui.sbReset = true; keepScroll(); return; }
+    const d = ui.draft; delete d.clock; delete d.periods; delete d.otWin; d.ot=false; d.sides.forEach(sd=>sd.score=0);
+    ui.sbReset = false; keepAwake(false); autosave(); keepScroll(); return; }
+  else if (a==="clockkeep"){ ui.sbReset = false; keepScroll(); return; }
   else if (a==="addp"){
     const s=b.dataset.s, t=b.dataset.t, name=$("#aname"+s).value.trim().replace(/[|;]/g,""), num=$("#anum"+s).value.replace(/\D/g,""), pos=$("#apos"+s).value;
     if (!name) { $("#aname"+s).focus(); return; }
