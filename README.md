@@ -1,3 +1,3 @@
-# Mini Stick '94
+# Barnburner
 
-A mini stick hockey tournament app. Live at https://j-byte6.github.io/mini-stick-94/
+A hockey tournament app for mini stick, roller or beer league nights. Live at https://j-byte6.github.io/mini-stick-94/
