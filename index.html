@@ -253,6 +253,7 @@ tr:nth-child(even) td{background:rgba(0,0,0,.18)}
 .sbmid{display:flex;flex-direction:column;align-items:center;gap:6px}
 .sbper{font-family:var(--pix);font-size:11px;color:var(--frost)}
 .sbclock{font-family:var(--pix);font-size:clamp(30px,7.5vw,60px);color:var(--gold);text-shadow:0 0 12px rgba(248,216,56,.55);background:#171200;border:2px solid #2e2600;padding:8px 10px 6px;line-height:1;font-variant-numeric:tabular-nums}
+.sbclock.cd{min-width:3ch;text-align:center;color:var(--ok);text-shadow:0 0 12px rgba(70,214,122,.6)}
 .sbclock.low{color:var(--fire);text-shadow:0 0 12px rgba(255,122,26,.7)}
 .sbstate{font-family:var(--pix);font-size:8px;color:var(--dim);min-height:10px}
 .sbstate.go{color:var(--ok)}
@@ -520,7 +521,7 @@ const HELP = [
   ["GAME NIGHT", `<ul><li>Tap a game in the bracket. Each side picks <b>one skater and one goalie</b> from their NHL roster.</li>
     <li>A skater can only be used <b>once per tournament</b>. Goalies can play again.</li>
     <li>If one person owns both teams in a game, change <b>Controlled by</b> to hand one side to someone else.</li>
-    <li>Pick <b>5, 10, 15 or 20 minute periods</b> and tap <b>Drop the puck</b>. The scoreboard runs the clock; at the horn, punch in that period's goals.</li>
+    <li>Pick <b>5, 10, 15 or 20 minute periods</b> and tap <b>Drop the puck</b>. A 10 second countdown gives everyone time to get in position. The scoreboard runs the clock; at the horn, punch in that period's goals.</li>
     <li>Tied after 3 periods? <b>Sudden-death OT</b>: the first goal wins. Or skip the clock and just enter the final score.</li></ul>`],
   ["STATS AND THE CUP", `<ul><li>The winner moves on automatically. Check <b>Stats</b> for standings, goalies and the game log.</li>
     <li>After the Cup Final, pick the <b>Conn Smythe</b> playoff MVP from the champion's players.</li>
@@ -832,6 +833,17 @@ function horn(){
   } catch(e) {}
   if (navigator.vibrate) try { navigator.vibrate([400,150,400]); } catch(e) {}
 }
+function beep(){
+  try {
+    audio = audio || new (window.AudioContext||window.webkitAudioContext)();
+    const t = audio.currentTime, g = audio.createGain(), o = audio.createOscillator();
+    g.gain.setValueAtTime(0.15, t); g.gain.exponentialRampToValueAtTime(0.0001, t+0.15);
+    o.type = "square"; o.frequency.value = 880; o.connect(g); g.connect(audio.destination); o.start(t); o.stop(t+0.16);
+  } catch(e) {}
+}
+/* every period (and OT) opens with a 10 second countdown so players can tap start and get in position */
+const COUNTDOWN = 10000;
+function startCountdown(c){ c.at = null; c.cd = Date.now() + COUNTDOWN; ui.lastBeep = null; keepAwake(true); }
 function keepAwake(on){
   try {
     if (on && !wakeLock && navigator.wakeLock) navigator.wakeLock.request("screen").then(l=>{ wakeLock=l; l.addEventListener("release",()=>{ wakeLock=null; }); }).catch(()=>{});
@@ -857,7 +869,16 @@ function settle(d){
 }
 setInterval(()=>{
   if (ui.view!=="game" || !ui.draft || !ui.draft.clock) return;
-  const c = ui.draft.clock; if (!c.at) return;
+  const c = ui.draft.clock;
+  if (c.cd){
+    const left = c.cd - Date.now();
+    if (left<=0){ c.at = c.cd; c.cd = null; horn(); autosave(); keepScroll(); return; }
+    const n = Math.ceil(left/1000);
+    if (n<=3 && ui.lastBeep!==n){ ui.lastBeep = n; beep(); }
+    const el = $(".sbclock"); if (el) el.textContent = n;
+    return;
+  }
+  if (!c.at) return;
   const ms = clockMs(c);
   if (c.phase==="play" && ms<=0){ endPeriod(ui.draft, true); keepScroll(); return; }
   const el = $(".sbclock"); if (el){ el.textContent = fmtClock(ms, c.phase==="ot"); el.classList.toggle("low", c.phase==="play" && ms<60000); }
@@ -881,15 +902,17 @@ function vScoreboard(g){
     const ms = clockMs(c), up = c.phase==="ot";
     const label = c.phase==="done" ? (d.otWin!=null ? "FINAL / OT" : "FINAL") : c.phase==="break" ? "END OF "+perName(c.per) : up ? "SUDDEN DEATH OT" : perName(c.per)+" PERIOD";
     const st = c.phase==="done" ? "" : c.at ? "RUNNING" : c.phase==="break" ? "INTERMISSION" : "PAUSED";
-    mid = `<div class="sbmid"><span class="sbper">${label}</span><span class="sbclock${!up&&c.phase==="play"&&ms<60000?" low":""}">${fmtClock(ms, up)}</span><span class="sbstate${c.at?" go":""}">${st}</span></div>`;
+    mid = c.cd ? `<div class="sbmid"><span class="sbper">${label}</span><span class="sbclock cd">${Math.max(1, Math.ceil((c.cd-Date.now())/1000))}</span><span class="sbstate go">GET IN POSITION</span></div>`
+      : `<div class="sbmid"><span class="sbper">${label}</span><span class="sbclock${!up&&c.phase==="play"&&ms<60000?" low":""}">${fmtClock(ms, up)}</span><span class="sbstate${c.at?" go":""}">${st}</span></div>`;
     const played = c.phase==="play" ? c.per : Math.min(c.per, PERIODS-1);
     const showOt = c.phase==="ot" || d.otWin!=null;
     const cols = [...Array(PERIODS).keys()];
     box = `<table class="sbbox"><thead><tr><th></th>${cols.map(p=>`<th>${p+1}</th>`).join("")}${showOt?"<th>OT</th>":""}<th>T</th></tr></thead><tbody>${[0,1].map(s=>
       `<tr><td>${esc(abbr(s))}</td>${cols.map(p=>`<td class="${p===c.per&&c.phase!=="done"&&c.phase!=="ot"?"cur":""}">${p<=played?d.periods[p][s]:"–"}</td>`).join("")}${showOt?`<td>${d.otWin===s?1:0}</td>`:""}<td class="t">${d.sides[s].score}</td></tr>`).join("")}</tbody></table>`;
     if (!isLocked){
-      const run = c.at ? `<button class="btn" data-act="clockpause">Pause</button>` : `<button class="btn primary" data-act="clockrun">${c.phase==="ot"&&!c.base?"Start OT":"Resume"}</button>`;
-      if (c.phase==="play") ctl = `<div class="sbctl">${run}<button class="btn small" data-act="clockend">End period now</button></div>`;
+      const run = c.at ? `<button class="btn" data-act="clockpause">Pause</button>` : `<button class="btn primary" data-act="clockrun">Resume</button>`;
+      if (c.cd) ctl = `<div class="sbctl"><button class="btn primary" data-act="cdskip">Skip countdown</button></div>`;
+      else if (c.phase==="play") ctl = `<div class="sbctl">${run}<button class="btn small" data-act="clockend">End period now</button></div>`;
       else if (c.phase==="ot") ctl = `<div class="sbctl">${run}${[0,1].map(s=>`<button class="btn" data-act="otgoal" data-s="${s}">${esc(abbr(s))} scored</button>`).join("")}</div>
         <div class="sbctl"><span class="muted">Sudden death: the first goal wins it.</span></div>`;
       if (c.phase==="break" || c.phase==="done"){
@@ -1219,14 +1242,15 @@ document.addEventListener("click", ev => {
   else if (a==="plen"){ state.periodLen = +b.dataset.m; persist(); keepScroll(); return; }
   else if (a==="clockgo"){ const len = state.periodLen || 10, d = ui.draft;
     d.periods = Array.from({length:PERIODS}, ()=>[0,0]); d.otWin = null;
-    d.clock = { len, per:0, phase:"play", left:len*60000, at:Date.now() }; syncScore(d);
+    d.clock = { len, per:0, phase:"play", left:len*60000, at:null }; syncScore(d);
     try { audio = audio || new (window.AudioContext||window.webkitAudioContext)(); audio.resume(); } catch(e) {}
-    keepAwake(true); autosave(); keepScroll(); return; }
+    startCountdown(d.clock); autosave(); keepScroll(); return; }
+  else if (a==="cdskip"){ const c = ui.draft.clock; c.at = Date.now(); c.cd = null; horn(); autosave(); keepScroll(); return; }
   else if (a==="clockpause"){ pauseClock(ui.draft.clock); keepAwake(false); autosave(); keepScroll(); return; }
   else if (a==="clockrun"){ const c = ui.draft.clock; c.at = Date.now(); try { audio && audio.resume(); } catch(e) {} keepAwake(true); keepScroll(); return; }
   else if (a==="clockend"){ endPeriod(ui.draft, false); keepScroll(); return; }
-  else if (a==="nextper"){ const c = ui.draft.clock; c.per++; c.phase="play"; c.left=c.len*60000; c.at=Date.now(); ui.editPer=null; keepAwake(true); autosave(); keepScroll(); return; }
-  else if (a==="startot"){ const c = ui.draft.clock; c.per=PERIODS; c.phase="ot"; c.base=0; c.at=null; ui.editPer=null; autosave(); keepScroll(); return; }
+  else if (a==="nextper"){ const c = ui.draft.clock; c.per++; c.phase="play"; c.left=c.len*60000; ui.editPer=null; startCountdown(c); autosave(); keepScroll(); return; }
+  else if (a==="startot"){ const c = ui.draft.clock; c.per=PERIODS; c.phase="ot"; c.base=0; ui.editPer=null; startCountdown(c); autosave(); keepScroll(); return; }
   else if (a==="otgoal"){ const d = ui.draft; pauseClock(d.clock); d.otWin = +b.dataset.s; d.clock.phase="done"; syncScore(d); horn(); keepAwake(false); autosave(); keepScroll(); return; }
   else if (a==="gameover"){ ui.draft.clock.phase="done"; ui.editPer=null; autosave(); keepScroll(); return; }
   else if (a==="editper"){ ui.editPer = +b.dataset.p; keepScroll(); return; }
