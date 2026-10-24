@@ -20,7 +20,7 @@ body{
   background-attachment:fixed;
   color:var(--ink); font-family:var(--txt); font-size:20px; line-height:1.15;
 }
-#app{max-width:1340px;margin:0 auto;padding-block:18px 48px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:18px}
+#app{max-width:1520px;margin:0 auto;padding-block:18px 48px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:18px}
 h1,h2,h3,.pix{font-family:var(--pix);font-weight:400;letter-spacing:.04em;margin:0;text-wrap:balance}
 h2{font-size:14px;color:var(--gold);text-shadow:2px 2px 0 #000}
 h3{font-size:11px;color:var(--dim)}
@@ -121,19 +121,29 @@ label{display:flex;flex-direction:column;gap:4px;font-size:18px;color:var(--dim)
 .dots i{width:10px;height:10px;background:var(--lo);border:2px solid var(--hi)}
 .dots i.on{background:var(--gold);border-color:var(--gold)}
 
+/* team badge with logo */
+.team{display:inline-flex;align-items:center;gap:6px;flex:none;vertical-align:middle}
+.team .logo{width:30px;height:30px;display:grid;place-items:center;flex:none}
+.team .logo svg,.team .logo img{width:100%;height:100%;object-fit:contain;display:block}
+.team.big .logo{width:76px;height:76px}
+.team.big{gap:10px}
+
 /* team badge */
 .badge{display:inline-grid;place-items:center;min-width:46px;height:26px;padding:0 4px;font-family:var(--pix);font-size:9px;color:var(--c2);background:var(--c1);border:2px solid #000;box-shadow:inset 0 -3px 0 rgba(0,0,0,.3);flex:none}
 .badge.big{min-width:96px;height:56px;font-size:18px;border-width:3px}
 
 /* bracket */
 .bwrap{overflow-x:auto;padding-bottom:6px}
-.bracket{display:grid;grid-template-columns:repeat(7,minmax(172px,1fr));gap:10px;min-width:1260px;align-items:stretch}
+.bracket{display:grid;grid-template-columns:repeat(7,minmax(200px,1fr));gap:12px;min-width:1460px;align-items:stretch}
 .bcol{display:flex;flex-direction:column;gap:8px;justify-content:space-around}
 .bcol h3{text-align:center;font-size:8px;min-height:20px}
 .match{display:flex;flex-direction:column;background:var(--lo);border:2px solid var(--hi);padding:0;cursor:pointer;text-align:left;color:var(--ink);font-family:var(--txt);width:100%}
 .match:hover,.match:focus-visible{border-color:var(--gold);outline:none;box-shadow:0 0 0 2px var(--gold)}
 .match[disabled]{cursor:default;opacity:.55;box-shadow:none;border-color:var(--hi)}
-.mrow{display:grid;grid-template-columns:auto auto 1fr auto;gap:6px;align-items:center;padding:4px 6px;font-size:18px;min-width:0}
+.mrow{display:grid;grid-template-columns:auto auto 1fr auto;gap:6px;align-items:center;padding:6px 8px;font-size:18px;min-width:0}
+.mrow .team .logo{width:34px;height:34px}
+.who2{display:flex;flex-direction:column;gap:3px;min-width:0}
+.who2 b{font-family:var(--pix);font-size:8px;font-weight:400;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mrow + .mrow{border-top:1px solid rgba(157,176,255,.25)}
 .mrow .who{font-size:16px;line-height:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mrow .sc{font-family:var(--pix);font-size:12px;min-width:20px;text-align:right}
@@ -240,7 +250,31 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const shuffle = a => { a = a.slice(); for (let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
 const teamName = ab => TEAMS[ab] ? TEAMS[ab][1] : "—";
-const badge = (ab, big) => ab ? `<span class="badge${big?" big":""}" style="--c1:${TEAMS[ab][3]};--c2:${TEAMS[ab][4]}">${ab}</span>` : `<span class="badge${big?" big":""}" style="--c1:#222a55;--c2:#9db0ff">TBD</span>`;
+/* team logos: a logos.json published beside the page ({"TOR": "data:image/..."}) wins;
+   any team without one gets a retro pixel crest drawn here in its colours */
+let LOGOS = {};
+fetch("logos.json").then(r=>r.ok?r.json():{}).then(j=>{ LOGOS=j||{}; if (Object.keys(LOGOS).length) render(); }).catch(()=>{});
+const FONT5 = {A:"01110100011000111111100011000110001",B:"11110100011000111110100011000111110",C:"01110100011000010000100001000101110",
+  D:"11110100011000110001100011000111110",E:"11111100001000011110100001000011111",F:"11111100001000011110100001000010000",
+  G:"01110100011000010111100011000101111",H:"10001100011000111111100011000110001",I:"01110001000010000100001000010001110",
+  J:"00111000100001000010000101001001100",K:"10001100101010011000101001001010001",L:"10000100001000010000100001000011111",
+  M:"10001110111010110101100011000110001",N:"10001100011100110101100111000110001",O:"01110100011000110001100011000101110",
+  P:"11110100011000111110100001000010000",Q:"01110100011000110001101011001001101",R:"11110100011000111110101001001010001",
+  S:"01111100001000001110000010000111110",T:"11111001000010000100001000010000100",U:"10001100011000110001100011000101110",
+  V:"10001100011000110001100010101000100",W:"10001100011000110101101011010101010",X:"10001100010101000100010101000110001",
+  Y:"10001100010101000100001000010000100",Z:"11111000010001000100010001000011111","?":"01110100010000100010001000000000100"};
+function crest(ab){
+  const c1 = ab?TEAMS[ab][3]:"#222a55", c2 = ab?TEAMS[ab][4]:"#9db0ff";
+  const letter = ab ? TEAMS[ab][1][0] : "?";
+  let px = "";
+  (FONT5[letter]||FONT5["?"]).split("").forEach((bit,i)=>{ if (bit==="1"){ const x=5+i%5, y=4+Math.floor(i/5);
+    px += `<rect x="${x+1}" y="${y+1}" width="1" height="1" fill="#000" opacity=".45"/><rect x="${x}" y="${y}" width="1" height="1" fill="${c2}"/>`; } });
+  return `<svg viewBox="0 0 15 16" shape-rendering="crispEdges" aria-hidden="true"><path d="M0.5 0.5H14.5V9.5L7.5 15.5L0.5 9.5Z" fill="${c1}" stroke="#000" stroke-width="1"/><rect x="1" y="1" width="13" height="2" fill="${c2}"/>${px}</svg>`;
+}
+const logo = ab => ab && LOGOS[ab] ? `<img src="${esc(LOGOS[ab])}" alt="">` : crest(ab);
+const badge = (ab, big) => `<span class="team${big?" big":""}"><span class="logo">${logo(ab)}</span>${ab
+  ? `<span class="badge${big?" big":""}" style="--c1:${TEAMS[ab][3]};--c2:${TEAMS[ab][4]}">${ab}</span>`
+  : `<span class="badge${big?" big":""}" style="--c1:#222a55;--c2:#9db0ff">TBD</span>`}</span>`;
 
 function roster(ab){
   const base = (ROSTER_RAW[ab]||"").split(";").filter(Boolean);
@@ -578,8 +612,8 @@ function matchCard(g){
     const e = ents[s]; const ent = e!=null ? state.entries[e] : null;
     const who = ent ? state.players[ctrl[s]] : null;
     const pick = gm && gm.sides[s].skater ? " · "+esc(pName(gm.sides[s].skater).split(" ").slice(-1)[0]) : "";
-    return `<div class="mrow${final?(win===s?" win":" lose"):""}"><span class="sd">${e!=null&&state.v>=2?e%CONF()+1:""}</span>${badge(ent&&ent.team)}
-      <span class="who" style="color:${who?PCOLORS[ctrl[s]]:"var(--dim)"}">${who?esc(who.name)+pick:"Winner of "+(g<8?"":"G"+(feeders(g)[s]+1))}</span>
+    return `<div class="mrow${final?(win===s?" win":" lose"):""}"><span class="sd">${e!=null&&state.v>=2?e%CONF()+1:""}</span><span class="team"><span class="logo">${logo(ent&&ent.team)}</span></span>
+      <span class="who2"><b>${ent?esc(TEAMS[ent.team][1]).toUpperCase():"TBD"}</b><span class="who" style="color:${who?PCOLORS[ctrl[s]]:"var(--dim)"}">${who?esc(who.name)+pick:"Winner of G"+(feeders(g)[s]+1)}</span></span>
       <span class="sc">${final?gm.sides[s].score:""}</span></div>`;
   }).join("");
   const foot = final ? `FINAL${gm.ot?" / OT":""}` : clash ? "SAME PLAYER · TAP TO SWAP" : gm ? "LINEUP SET" : ready ? "TAP TO PLAY" : "WAITING";
@@ -604,7 +638,7 @@ function vBracket(){
   const ncols = 2*(R-1)+1;
   return `<section class="panel">
     <div class="row"><h2>PLAYOFF BRACKET · ${SIZE()} TEAMS</h2><span class="grow"></span><span class="muted">Tap a game to set lineups and enter the score.</span></div>
-    <div class="bwrap"><div class="bracket" style="grid-template-columns:repeat(${ncols},minmax(172px,1fr));min-width:${ncols*180}px">
+    <div class="bwrap"><div class="bracket" style="grid-template-columns:repeat(${ncols},minmax(200px,1fr));min-width:${ncols*210}px">
       ${west.join("")}${cupCol}${east.join("")}
     </div></div>
   </section>`;
