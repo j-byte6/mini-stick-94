@@ -523,7 +523,7 @@ const HELP = [
   ["GAME NIGHT", `<ul><li>Tap a game in the bracket. Each side picks <b>one skater and one goalie</b> from their NHL roster.</li>
     <li>A skater can only be used <b>once per tournament</b>. Goalies can play again.</li>
     <li>If one person owns both teams in a game, change <b>Controlled by</b> to hand one side to someone else.</li>
-    <li>Pick <b>5, 10, 15 or 20 minute periods</b> and tap <b>Drop the puck</b>. A 10 second countdown gives everyone time to get in position. The scoreboard runs the clock; at the horn, punch in that period's goals.</li>
+    <li>Pick <b>2, 3, 5, 10, 15 or 20 minute periods</b> and tap <b>Drop the puck</b>. A 10 second countdown gives everyone time to get in position. The scoreboard runs the clock; at the horn, punch in that period's goals.</li>
     <li>Tied after 3 periods? <b>Sudden-death OT</b>: the first goal wins. Or skip the clock and just enter the final score.</li></ul>`],
   ["STATS AND THE CUP", `<ul><li>The winner moves on automatically. Check <b>Stats</b> for standings, goalies and the game log.</li>
     <li>After the Cup Final, pick the <b>Conn Smythe</b> playoff MVP from the champion's players.</li>
@@ -809,7 +809,7 @@ function draftIssues(g){
    period's goals at the horn. Tied after 3 periods means sudden-death OT: next goal wins.
    d.clock.phase: "play" (a regulation period is on), "break" (period over, enter its goals),
    "ot" (sudden death, clock counts up), "done" (game over). d.periods holds [side0, side1] goals per period. */
-const PERIODS = 3, LENGTHS = [5,10,15,20];
+const PERIODS = 3, LENGTHS = [2,3,5,10,15,20];
 const perName = p => p>=PERIODS ? "OT" : ["1ST","2ND","3RD"][p];
 const regGoals = (d, s) => d.periods.reduce((t,pg)=>t+pg[s], 0);
 function syncScore(d){
