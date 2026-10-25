@@ -1,5 +1,14 @@
 <meta charset="utf-8">
 <title>Barnburner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050a33">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Barnburner">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -129,6 +138,8 @@ label{display:flex;flex-direction:column;gap:4px;font-size:18px;color:var(--dim)
 .help ul{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px;font-size:20px}
 .help li::marker{color:var(--gold)}
 .help b{color:var(--gold);font-weight:400}
+.help ol{margin:0;padding-left:26px;display:flex;flex-direction:column;gap:6px;font-size:20px}
+.help ol li::marker{color:var(--gold);font-family:var(--pix);font-size:11px}
 .dots{display:flex;gap:6px}
 .dots i{width:10px;height:10px;background:var(--lo);border:2px solid var(--hi)}
 .dots i.on{background:var(--gold);border-color:var(--gold)}
@@ -540,6 +551,32 @@ function vHelp(){
       ${last?`<button class="btn primary" data-act="helpclose">Let's play</button>`:`<button class="btn primary" data-act="helpnav" data-d="1">Next</button>`}</div>
   </section></div>`;
 }
+/* add to home screen: Chrome and Edge on Android hand us an install prompt; iPhone needs the Share menu, so show the steps */
+let installEvt = null;
+const installed = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+window.addEventListener("beforeinstallprompt", ev => { ev.preventDefault(); installEvt = ev; });
+window.addEventListener("appinstalled", () => { installEvt = null; ui.install = false; render(); });
+function vInstall(){
+  const steps = isIOS()
+    ? `<p>On iPhone or iPad, use <b>Safari</b> (in another browser, open this page in Safari first).</p>
+       <ol><li>Tap the <b>Share</b> button (the square with an arrow pointing up). It's at the bottom of the screen, or behind the <b>···</b> button.</li>
+       <li>Scroll down and tap <b>Add to Home Screen</b>.</li>
+       <li>Tap <b>Add</b>. Barnburner is now an icon on your home screen.</li></ol>
+       <p class="muted">The home-screen app keeps its own tournaments and Cup records, separate from Safari. Run your tournaments from the icon.</p>`
+    : `<p>On Android, use <b>Chrome</b>.</p>
+       <ol><li>Tap the <b>⋮</b> menu at the top right.</li>
+       <li>Tap <b>Add to Home screen</b> or <b>Install app</b>.</li>
+       <li>Tap <b>Install</b>. Barnburner is now an icon on your home screen.</li></ol>
+       <p class="muted">On a computer, look for the install icon at the right end of Chrome or Edge's address bar.</p>`;
+  return `<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="install-title"><section class="panel help">
+    <div class="row"><span class="hstep">ADD TO HOME SCREEN</span><span class="grow"></span><button class="btn small" data-act="installclose">Close</button></div>
+    <h2 id="install-title">PUT BARNBURNER ON YOUR PHONE</h2>
+    <p>It gets its own icon, opens full screen, and works at the rink with no signal.</p>
+    ${steps}
+    <div class="row"><span class="grow"></span><button class="btn primary" data-act="installclose">Got it</button></div>
+  </section></div>`;
+}
 function closeHelp(){
   ui.help = null;
   try { localStorage.setItem(HELP_KEY, "1"); } catch(e) {}
@@ -609,8 +646,9 @@ function render(){
   else if (ui.view==="records") h = vTop() + vRecords();
   else if (ui.view==="share") h = vTop() + vShare();
   if (ui.help!=null) h += vHelp();
+  else if (ui.install) h += vInstall();
   app.innerHTML = h;
-  if (ui.help!=null){ const f = app.querySelector(".help .btn.primary"); if (f) f.focus({preventScroll:true}); }
+  if (ui.help!=null || ui.install){ const f = app.querySelector(".help .btn.primary"); if (f) f.focus({preventScroll:true}); }
 }
 
 function vTop(){
@@ -649,6 +687,7 @@ function vTitle(){
            <button class="btn" data-act="sample">Load a sample tournament</button>
            <button class="btn" data-act="go" data-v="records">Cup records</button>`}
       <button class="btn" data-act="help">How to play</button>
+      ${installed()?"":`<button class="btn" data-act="install">Add to home screen</button>`}
     </div>
     ${ui.notice?`<p class="warn">${esc(ui.notice)}</p>`:""}
     <p class="muted" style="max-width:56ch">4, 8 or 16 teams, East vs West. 2 to 8 people. Each game, both sides pick one skater and one goalie from their NHL roster. A skater can only be used once per tournament. Goalies can play again.</p>
@@ -1210,6 +1249,11 @@ document.addEventListener("click", ev => {
   else if (a==="help"){ ui.help = 0; }
   else if (a==="helpnav"){ ui.help = Math.max(0, Math.min(HELP.length-1, ui.help + (+b.dataset.d))); }
   else if (a==="helpclose"){ closeHelp(); }
+  else if (a==="install"){
+    if (installEvt){ const e = installEvt; installEvt = null; e.prompt(); e.userChoice.finally(()=>render()); return; }
+    ui.install = true;
+  }
+  else if (a==="installclose"){ ui.install = false; }
   else if (a==="home"){ ui.view="title"; ui.confirmNew=false; ui.notice=""; }
   else if (a==="continue"){ ui.view = state.stage==="bracket" ? "bracket" : "setup"; }
   else if (a==="new"){
@@ -1302,6 +1346,7 @@ function keepScroll(){
   document.querySelectorAll(".plist").forEach((el,i)=>el.scrollTop=lists[i]||0);
 }
 document.addEventListener("keydown", ev => {
+  if (ui.install && ev.key==="Escape"){ ui.install = false; render(); return; }
   if (ui.help==null) return;
   if (ev.key==="Escape"){ closeHelp(); render(); }
   else if (ev.key==="ArrowRight" && ui.help<HELP.length-1){ ui.help++; render(); }
@@ -1335,5 +1380,7 @@ if (shared){
       ui.notice = "That results link didn't open. It may have been cut short when it was copied, so ask for it again."; render(); });
 } else bootLocal();
 window.addEventListener("hashchange", ()=>{ if (/^#r=/.test(location.hash)) location.reload(); });
+/* offline: sw.js keeps a copy of the app so it opens at the rink with no signal */
+if ("serviceWorker" in navigator && (location.protocol==="https:" || location.hostname==="localhost")) navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
 
