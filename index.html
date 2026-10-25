@@ -313,8 +313,6 @@ const TEAMS = {
 const WEST = Object.keys(TEAMS).filter(k=>TEAMS[k][2]==="W").sort();
 const EAST = Object.keys(TEAMS).filter(k=>TEAMS[k][2]==="E").sort();
 const PCOLORS = ["#ff4a4a","#46a0ff","#f8d838","#46d67a","#ff9a3c","#b57cff","#ff6ec7","#3ce0e0"];
-/* everyone owns at least one team, so a 4-team bracket caps at 4 players */
-const MAXP = () => Math.min(8, SIZE());
 const ROUND_NAMES = ["Round 1","Conference Semifinal","Conference Final","Stanley Cup Final"];
 const KEY = "ministick94.v1";
 const HKEY = "ministick94.history.v1";
@@ -513,7 +511,7 @@ const HELP = [
   ["WELCOME TO BARNBURNER", `<p>Run a mini stick or roller hockey playoff. One device runs the whole tournament: set it up once, then play each game and punch in the score.</p>
     <ul><li><b>Size:</b> 4, 8 or 16 teams</li><li><b>Players:</b> who's playing (2 to 8)</li><li><b>Teams:</b> pick the NHL teams</li><li><b>Draft order:</b> who picks first</li><li><b>Draft:</b> take turns choosing teams, which sets the seeds</li></ul>`],
   ["SIZE AND PLAYERS", `<ul><li>Pick <b>4, 8 or 16 teams</b>. Half play in the West, half in the East, and the two conference champions meet in the Stanley Cup Final.</li>
-    <li>Choose <b>2 to 8 players</b> and type their names (up to 4 in a 4-team bracket, so everyone gets a team). Each gets a colour that follows them through the bracket.</li></ul>`],
+    <li>Choose <b>2 to 8 players</b> and type their names (with more players than teams, the last few in the draft sit out but can still fill in as stand-ins). Each gets a colour that follows them through the bracket.</li></ul>`],
   ["TEAMS", `<ul><li>Pick the teams for each conference, or tap <b>Random</b>.</li>
     <li>You can enter the same NHL team twice, but its skaters are shared between both copies.</li></ul>`],
   ["THE DRAFT", `<ul><li>Set the <b>draft order</b> or randomize it. A <b>snake</b> draft flips the order each round.</li>
@@ -673,8 +671,8 @@ function vSetup(){
     const n = state.players.length;
     body = `<h2>WHO'S PLAYING?</h2>
     <label>Tournament name <input id="tname" data-in="tname" value="${esc(state.name)}" maxlength="40"></label>
-    <div class="row"><span class="muted">Number of players</span>${[2,3,4,5,6,7,8].filter(k=>k<=MAXP()).map(k=>`<button class="btn small${n===k?" on":""}" data-act="nplayers" data-n="${k}">${k}</button>`).join("")}</div>
-    ${SIZE()<8?`<p class="muted">A 4-team bracket allows up to 4 players so everyone gets a team. Pick 8 or 16 teams for up to 8.</p>`:SIZE()%n?`<p class="muted">${SIZE()} teams don't split evenly between ${n} players, so ${SIZE()%n} of them ${SIZE()%n===1?"gets":"get"} ${Math.ceil(SIZE()/n)} teams and the rest get ${Math.floor(SIZE()/n)}. You'll see who on the draft order screen.</p>`:""}
+    <div class="row"><span class="muted">Number of players</span>${[2,3,4,5,6,7,8].map(k=>`<button class="btn small${n===k?" on":""}" data-act="nplayers" data-n="${k}">${k}</button>`).join("")}</div>
+    ${n>SIZE()?`<p class="muted">${SIZE()} teams for ${n} players, so ${n-SIZE()} won't get a team. They can still play by filling in as a stand-in on game night. You'll see who on the draft order screen.</p>`:SIZE()%n?`<p class="muted">${SIZE()} teams don't split evenly between ${n} players, so ${SIZE()%n} of them ${SIZE()%n===1?"gets":"get"} ${Math.ceil(SIZE()/n)} teams and the rest get ${Math.floor(SIZE()/n)}. You'll see who on the draft order screen.</p>`:""}
     <div class="pgrid">${state.players.map((p,i)=>`<label><span><i class="chip" style="background:${PCOLORS[i]}"></i>Player ${i+1}</span><input id="pname${i}" data-in="pname" data-i="${i}" value="${esc(p.name)}" maxlength="16"></label>`).join("")}</div>
     <div class="row"><button class="btn" data-act="step" data-s="1">Back</button><span class="grow"></span><button class="btn primary" data-act="step" data-s="3">Next: pick teams</button></div>`;
   } else if (st===3){
@@ -709,7 +707,8 @@ function vSetup(){
       <button class="btn small${state.snake?" on":""}" data-act="snake" data-v="1">Snake</button>
       <button class="btn small${!state.snake?" on":""}" data-act="snake" data-v="0">Same order every round</button></div>
     <p class="muted">${state.snake?"Snake: the order flips each round, so whoever picks last in a round picks first in the next.":"Every round goes in the same order."} Picks go: ${esc(seq.join(", "))}…</p>
-    ${SIZE()%n?`<p class="muted">${SIZE()} teams don't split evenly between ${n}, so ${esc(Array.from({length:SIZE()%n},(_,k)=>state.players[onClock(SIZE()-SIZE()%n+k)].name).join(", "))} ${SIZE()%n===1?"gets":"get"} one extra team.</p>`:""}
+    ${n>SIZE()?`<p class="muted">Only ${SIZE()} teams for ${n} players, so ${esc(state.draftOrder.slice(SIZE()).map(i=>state.players[i].name).join(", "))} won't get a team. They can still play as a stand-in: on a game's screen, change <b>Controlled by</b> to them.</p>`
+      :SIZE()%n?`<p class="muted">${SIZE()} teams don't split evenly between ${n}, so ${esc(Array.from({length:SIZE()%n},(_,k)=>state.players[onClock(SIZE()-SIZE()%n+k)].name).join(", "))} ${SIZE()%n===1?"gets":"get"} one extra team.</p>`:""}
     <div class="row"><button class="btn" data-act="step" data-s="3">Back</button><span class="grow"></span>
       <button class="btn primary" data-act="step" data-s="5">Start the draft</button></div>`;
   } else {
@@ -888,6 +887,7 @@ setInterval(()=>{
 }, 250);
 document.addEventListener("visibilitychange", ()=>{ if (document.visibilityState==="visible" && ui.draft && ui.draft.clock && ui.draft.clock.at) keepAwake(true); });
 
+const lineupSet = d => d.sides.every(s=>s.skater && s.goalie);
 function vScoreboard(g){
   const d = ui.draft, c = d.clock, isLocked = locked(g);
   const ent = s => state.entries[entryOf(g,s)];
@@ -899,7 +899,8 @@ function vScoreboard(g){
     mid = `<div class="sbmid"><span class="sbper">GAME CLOCK</span><span class="sbclock">${fmtClock(len*60000)}</span><span class="sbstate">${PERIODS} PERIODS</span></div>`;
     ctl = isLocked ? "" : `<div class="sbctl" style="flex-direction:column"><span class="muted">Minutes per period</span>
       <div class="lens">${LENGTHS.map(m=>`<button class="btn small${m===len?" sel":""}" data-act="plen" data-m="${m}">${m} MIN</button>`).join("")}</div>
-      <button class="btn primary" data-act="clockgo">Drop the puck</button>
+      ${lineupSet(d)?"":`<span class="warn">Pick a skater and a goalie for both teams before the puck drops.</span>`}
+      <button class="btn primary" data-act="clockgo"${lineupSet(d)?"":" disabled"}>Drop the puck</button>
       <span class="muted">Not using the clock? Just punch in the final score below.</span></div>`;
   } else {
     const ms = clockMs(c), up = c.phase==="ot";
@@ -1224,13 +1225,13 @@ document.addEventListener("click", ev => {
   }
   else if (a==="go"){ ui.view = b.dataset.v; }
   else if (a==="nplayers"){
-    const n = Math.min(+b.dataset.n, MAXP()); while (state.players.length<n) state.players.push({name:"Player "+(state.players.length+1)});
+    const n = +b.dataset.n; while (state.players.length<n) state.players.push({name:"Player "+(state.players.length+1)});
     state.players.length = n; fixOrder(); resetDraft(); persist();
   }
   else if (a==="step"){ state.step = +b.dataset.s; persist(); window.scrollTo(0,0); }
   else if (a==="randconf"){ randomConf(+b.dataset.c, !!b.dataset.rep); resetDraft(); persist(); }
   else if (a==="randall"){ randomConf(0); randomConf(CONF()); resetDraft(); persist(); }
-  else if (a==="size"){ const n=+b.dataset.n; if (n!==SIZE()){ state.size=n; state.entries=Array.from({length:n},()=>({team:null,owner:null})); state.games={}; state.conn=null; if (state.players.length>MAXP()){ state.players.length=MAXP(); fixOrder(); } resetDraft(); persist(); } }
+  else if (a==="size"){ const n=+b.dataset.n; if (n!==SIZE()){ state.size=n; state.entries=Array.from({length:n},()=>({team:null,owner:null})); state.games={}; state.conn=null; resetDraft(); persist(); } }
   else if (a==="clearteams"){ state.entries.forEach(e=>e.team=null); resetDraft(); persist(); }
   else if (a==="randorder"){ fixOrder(); state.draftOrder = shuffle(state.draftOrder); resetDraft(); persist(); }
   else if (a==="ordmove"){ const k=+b.dataset.k, j=k+(+b.dataset.d); const O=state.draftOrder; [O[k],O[j]]=[O[j],O[k]]; resetDraft(); persist(); }
@@ -1243,7 +1244,7 @@ document.addEventListener("click", ev => {
   else if (a==="pick"){ const s=+b.dataset.s, k=b.dataset.k; ui.draft.sides[s][k] = ui.draft.sides[s][k]===b.dataset.id ? null : b.dataset.id; keepScroll(); return; }
   else if (a==="score"){ const s=+b.dataset.s; ui.draft.sides[s].score = Math.max(0, Math.min(99, ui.draft.sides[s].score + (+b.dataset.d))); keepScroll(); return; }
   else if (a==="plen"){ state.periodLen = +b.dataset.m; persist(); keepScroll(); return; }
-  else if (a==="clockgo"){ const len = state.periodLen || 10, d = ui.draft;
+  else if (a==="clockgo"){ if (!lineupSet(ui.draft)) return; const len = state.periodLen || 10, d = ui.draft;
     d.periods = Array.from({length:PERIODS}, ()=>[0,0]); d.otWin = null;
     d.clock = { len, per:0, phase:"play", left:len*60000, at:null }; syncScore(d);
     try { audio = audio || new (window.AudioContext||window.webkitAudioContext)(); audio.resume(); } catch(e) {}
