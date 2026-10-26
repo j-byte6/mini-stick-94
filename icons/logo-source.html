@@ -1,0 +1,22 @@
+<!doctype html><html><head>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=block">
+<style>
+:root{--navy:#050a33;--hi:#5c78ee;--ice:#e4ecff;--red:#ec3a3a;--gold:#f8d838;--fire:#ff7a1a;--ember:#ff3d1f;--frost:#7fd4ff}
+html,body{margin:0;width:512px;height:512px;overflow:hidden}
+body{background:radial-gradient(ellipse at 50% 0%,#142283 0%,var(--navy) 75%)}
+.wrap{position:absolute;inset:0;transform:scale(1);}
+.rink{position:absolute;inset:34px;background:var(--ice);border:10px solid #000;border-radius:96px;box-shadow:0 0 0 7px var(--hi);overflow:hidden}
+.rink i{position:absolute;top:0;bottom:0}
+.red{left:calc(50% - 7px);width:14px;background:var(--red)}
+.b1{left:17%;width:14px;background:#2149d8}.b2{right:17%;width:14px;background:#2149d8}
+.circ{position:absolute;left:50%;top:50%;width:190px;height:190px;border:7px solid #2149d8;border-radius:50%;transform:translate(-50%,-50%)}
+.dot{position:absolute;left:50%;top:50%;width:22px;height:22px;background:#2149d8;border-radius:50%;transform:translate(-50%,-50%)}
+h1{position:absolute;inset:0;margin:0;display:flex;flex-direction:column;justify-content:center;align-items:center;font-family:"Press Start 2P";font-weight:400;font-size:64px;line-height:1.22;letter-spacing:.02em}
+h1 span{display:block;background:linear-gradient(180deg,#fff3a0 0%,var(--gold) 28%,var(--fire) 62%,var(--ember) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(4px 0 0 #000) drop-shadow(-4px 0 0 #000) drop-shadow(0 4px 0 #000) drop-shadow(0 -4px 0 #000) drop-shadow(6px 6px 0 #6a0d0d) drop-shadow(5px 5px 0 #000)}
+h1 .ice{background:linear-gradient(180deg,#ffffff 0%,var(--ice) 35%,var(--frost) 75%,#3f8fd8 100%);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(4px 0 0 #000) drop-shadow(-4px 0 0 #000) drop-shadow(0 4px 0 #000) drop-shadow(0 -4px 0 #000) drop-shadow(6px 6px 0 #0b3a8a) drop-shadow(5px 5px 0 #000)}
+.puck{position:absolute;width:58px;height:36px;background:#000;border-radius:50%;left:250px;top:330px;box-shadow:0 0 16px 8px var(--fire),0 0 46px 20px rgba(255,61,31,.6)}
+.trail{position:absolute;left:110px;top:308px;width:240px;height:80px;background:radial-gradient(closest-side at 70% 50%,rgba(255,122,26,.75),rgba(255,61,31,.35) 45%,transparent 70%)}
+</style></head><body><div class="wrap">
+<div class="rink"><i class="b1"></i><i class="red"></i><i class="b2"></i><span class="circ"></span><span class="dot"></span>
+<span class="trail"></span><span class="puck"></span>
+<h1><span>BARN</span><span class="ice">BURNER</span></h1></div></div></body></html>
