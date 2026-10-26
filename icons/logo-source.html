@@ -1,0 +1,55 @@
+<!doctype html><html><head>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=block">
+<style>
+:root{--navy:#050a33;--hi:#5c78ee;--ice:#e4ecff;--red:#ec3a3a;--gold:#f8d838;--fire:#ff7a1a;--ember:#ff3d1f;--frost:#7fd4ff}
+html,body{margin:0;width:512px;height:512px;overflow:hidden}
+body{background:radial-gradient(ellipse at 50% 0%,#142283 0%,var(--navy) 75%)}
+.wrap{position:absolute;inset:0;transform:scale(1);}
+.rink{position:absolute;inset:34px;background:var(--ice);border:10px solid #000;border-radius:96px;box-shadow:0 0 0 7px var(--hi);overflow:hidden}
+.rink i{position:absolute;top:0;bottom:0}
+.red{left:calc(50% - 7px);width:14px;background:var(--red)}
+.b1{left:17%;width:14px;background:#2149d8}.b2{right:17%;width:14px;background:#2149d8}
+.circ{position:absolute;left:50%;top:50%;width:190px;height:190px;border:7px solid #2149d8;border-radius:50%;transform:translate(-50%,-50%)}
+.dot{position:absolute;left:50%;top:50%;width:22px;height:22px;background:#2149d8;border-radius:50%;transform:translate(-50%,-50%)}
+h1{position:absolute;inset:0;z-index:2;margin:0;display:flex;flex-direction:column;justify-content:center;align-items:center;font-family:"Press Start 2P";font-weight:400;font-size:64px;line-height:1.22;letter-spacing:.02em}
+h1 span{display:block;background:linear-gradient(180deg,#fff3a0 0%,var(--gold) 28%,var(--fire) 62%,var(--ember) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(4px 0 0 #000) drop-shadow(-4px 0 0 #000) drop-shadow(0 4px 0 #000) drop-shadow(0 -4px 0 #000) drop-shadow(6px 6px 0 #6a0d0d) drop-shadow(5px 5px 0 #000)}
+h1 .ice{background:linear-gradient(180deg,#ffffff 0%,var(--ice) 35%,var(--frost) 75%,#3f8fd8 100%);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(4px 0 0 #000) drop-shadow(-4px 0 0 #000) drop-shadow(0 4px 0 #000) drop-shadow(0 -4px 0 #000) drop-shadow(6px 6px 0 #0b3a8a) drop-shadow(5px 5px 0 #000)}
+.puck{position:absolute;width:58px;height:36px;background:#000;border-radius:50%;left:300px;top:372px;box-shadow:0 0 16px 8px var(--fire),0 0 46px 20px rgba(255,61,31,.6)}
+.trail{position:absolute;left:160px;top:350px;width:240px;height:80px;background:radial-gradient(closest-side at 70% 50%,rgba(255,122,26,.75),rgba(255,61,31,.35) 45%,transparent 70%)}
+</style></head><body><div class="wrap">
+<div class="rink"><i class="b1"></i><i class="red"></i><i class="b2"></i><span class="circ"></span><span class="dot"></span>
+<span class="trail"></span><span class="puck"></span>
+<svg id="fx" width="512" height="512" viewBox="0 0 512 512" style="position:absolute;left:0;top:0;overflow:visible"></svg>
+<h1><span id="barn">BARN</span><span class="ice" id="burner">BURNER</span></h1></div></div>
+<script>
+async function fx(){
+  await document.fonts.ready;
+  const sv=document.getElementById('fx'), base=sv.getBoundingClientRect();
+  const sc=1;
+  const r=id=>{const b=document.getElementById(id).getBoundingClientRect();return {l:(b.left-base.left)/sc,r:(b.right-base.left)/sc,t:(b.top-base.top)/sc,b:(b.bottom-base.top)/sc};};
+  const A=r('barn'), B=r('burner');
+  // glyph box inside the line box: Press Start 2P cap height ~ font-size
+  const fs=64, lhA=(A.b-A.t), capTopA=A.t+(lhA-fs)/2+2, capBotB=B.t+(B.b-B.t+fs)/2-2;
+  let g='<defs><linearGradient id="fl" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff3d1f"/><stop offset=".55" stop-color="#ff7a1a"/><stop offset="1" stop-color="#f8d838"/></linearGradient>'+
+        '<linearGradient id="fc" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ffd23a"/><stop offset="1" stop-color="#fff6c0"/></linearGradient>'+
+        '<linearGradient id="ic" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#9fdcff"/><stop offset="1" stop-color="#3f8fd8"/></linearGradient></defs>';
+  // flames: one tongue cluster per letter of BARN
+  const n=4, w=(A.r-A.l)/n, hs=[72,96,84,66];
+  for(let i=0;i<n;i++){
+    const x0=A.l+i*w+4, x1=x0+w-10, cx=(x0+x1)/2, y=capTopA+10, h=hs[i];
+    const lean=(i-1.5)*3;
+    const outer=`M${x0},${y} C${x0-4},${y-h*.45} ${x0+8},${y-h*.6} ${x0+10},${y-h*.75} C${x0+14},${y-h*.55} ${cx-6},${y-h*.5} ${cx-4},${y-h*.55} C${cx-8},${y-h*.8} ${cx+lean},${y-h*.95} ${cx+4+lean},${y-h} C${cx+4},${y-h*.75} ${x1-6},${y-h*.65} ${x1-4},${y-h*.5} C${x1},${y-h*.6} ${x1+2},${y-h*.62} ${x1+4},${y-h*.66} C${x1+8},${y-h*.4} ${x1+4},${y-h*.15} ${x1},${y} Z`;
+    const inner=`M${cx-14},${y} C${cx-16},${y-h*.3} ${cx-6},${y-h*.45} ${cx+2+lean*.5},${y-h*.62} C${cx+4},${y-h*.4} ${cx+16},${y-h*.3} ${cx+12},${y} Z`;
+    g+=`<path d="${outer}" fill="url(#fl)" stroke="#000" stroke-width="4" stroke-linejoin="round"/><path d="${inner}" fill="url(#fc)"/>`;
+  }
+  // icicles: hanging from the bottom of BURNER
+  const lens=[34,58,26,46,66,30,52,28,62,40,24,54], m=lens.length, step=(B.r-B.l-16)/m;
+  for(let k=0;k<m;k++){
+    const x=B.l+10+k*step, wd=step*.75, y=capBotB+2, L=lens[k];
+    g+=`<path d="M${x},${y} L${x+wd},${y} L${x+wd*.55},${y+L} Z" fill="url(#ic)" stroke="#000" stroke-width="3.5" stroke-linejoin="round"/>`;
+    g+=`<path d="M${x+wd*.3},${y+4} L${x+wd*.5},${y+L*.7}" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>`;
+  }
+  sv.innerHTML=g; document.body.dataset.ready=1;
+}
+fx();
+</script></body></html>
