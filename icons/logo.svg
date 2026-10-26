@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<defs>
+  <radialGradient id="bg" cx="50%" cy="58%" r="70%"><stop offset="0" stop-color="#3a1d5c"/><stop offset=".45" stop-color="#142283"/><stop offset="1" stop-color="#050a33"/></radialGradient>
+  <radialGradient id="glow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ff7a1a" stop-opacity=".55"/><stop offset="1" stop-color="#ff7a1a" stop-opacity="0"/></radialGradient>
+  <linearGradient id="f1" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff3d1f"/><stop offset=".6" stop-color="#ec3a3a"/><stop offset="1" stop-color="#b3122a"/></linearGradient>
+  <linearGradient id="f2" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ffb23a"/><stop offset="1" stop-color="#ff7a1a"/></linearGradient>
+  <linearGradient id="f3" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#fffbe6"/><stop offset=".5" stop-color="#ffe680"/><stop offset="1" stop-color="#f8d838"/></linearGradient>
+  <linearGradient id="shaft" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#c9d2e6"/><stop offset=".4" stop-color="#ffffff"/><stop offset="1" stop-color="#aeb8d0"/></linearGradient>
+  <linearGradient id="pside" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2a33"/><stop offset="1" stop-color="#070709"/></linearGradient>
+  <linearGradient id="ptop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a3a30"/><stop offset=".5" stop-color="#2c2c36"/><stop offset="1" stop-color="#1b1b22"/></linearGradient>
+  <filter id="blur"><feGaussianBlur stdDeviation="10"/></filter>
+  <g id="stick">
+    <rect x="-17" y="-250" width="34" height="415" rx="7" fill="url(#shaft)" stroke="#050a33" stroke-width="5"/>
+    <rect x="-17" y="-250" width="34" height="62" rx="7" fill="#111" stroke="#050a33" stroke-width="5"/>
+    <rect x="-17" y="-60" width="34" height="14" fill="#ec3a3a"/><rect x="-17" y="-40" width="34" height="8" fill="#ec3a3a"/>
+    <path d="M-17,150 L17,150 L17,168 C40,176 80,174 112,166 C122,164 126,176 120,186 C116,196 104,200 92,202 L-6,204 C-16,204 -16,196 -14,180 Z" fill="#f3f5ff" stroke="#050a33" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M30,172 L30,202 M50,174 L50,202 M70,174 L70,201 M90,172 L90,200" stroke="#9db0ff" stroke-width="3"/>
+  </g>
+</defs>
+<rect width="512" height="512" fill="url(#bg)"/>
+<g transform="translate(256 256) scale(1) translate(-256 -256)">
+  <circle cx="256" cy="250" r="190" fill="url(#glow)"/>
+  <g transform="translate(256 262) rotate(-42)"><use href="#stick"/></g>
+  <g transform="translate(256 262) scale(-1 1) rotate(-42)"><use href="#stick"/></g>
+  <path d="M140,345 C112,285 140,240 168,205 C172,245 186,260 200,262 C184,205 205,148 242,98 C236,158 254,188 268,198 C268,146 292,104 324,66 C314,128 332,168 350,186 C352,168 360,156 374,146 C396,210 392,292 372,345 Z" fill="#ff5a1a" filter="url(#blur)" opacity=".8"/>
+  <path d="M140,345 C112,285 140,240 168,205 C172,245 186,260 200,262 C184,205 205,148 242,98 C236,158 254,188 268,198 C268,146 292,104 324,66 C314,128 332,168 350,186 C352,168 360,156 374,146 C396,210 392,292 372,345 Z" fill="url(#f1)" stroke="#5a0a14" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M140,345 C112,285 140,240 168,205 C172,245 186,260 200,262 C184,205 205,148 242,98 C236,158 254,188 268,198 C268,146 292,104 324,66 C314,128 332,168 350,186 C352,168 360,156 374,146 C396,210 392,292 372,345 Z" fill="url(#f2)" transform="translate(256 345) scale(.74 .74) translate(-256 -345)"/>
+  <path d="M140,345 C112,285 140,240 168,205 C172,245 186,260 200,262 C184,205 205,148 242,98 C236,158 254,188 268,198 C268,146 292,104 324,66 C314,128 332,168 350,186 C352,168 360,156 374,146 C396,210 392,292 372,345 Z" fill="url(#f3)" transform="translate(262 345) scale(.46 .48) translate(-256 -345)"/>
+  <g>
+    <path d="M144,342 L144,384 A112,34 0 0 0 368,384 L368,342 Z" fill="url(#pside)" stroke="#000" stroke-width="5"/>
+    <path d="M150,372 A106,30 0 0 0 362,372" fill="none" stroke="#3c3c48" stroke-width="3"/>
+    <ellipse cx="256" cy="342" rx="112" ry="34" fill="url(#ptop)" stroke="#000" stroke-width="5"/>
+    <ellipse cx="256" cy="336" rx="80" ry="18" fill="#ff7a1a" opacity=".22"/>
+  </g>
+  <circle cx="186" cy="150" r="5" fill="#f8d838"/><circle cx="352" cy="118" r="4" fill="#ff7a1a"/><circle cx="214" cy="84" r="3.5" fill="#ffb23a"/><circle cx="380" cy="190" r="3" fill="#f8d838"/>
+</g>
+</svg>
